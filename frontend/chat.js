@@ -147,13 +147,18 @@ class BlowerChat {
     }
 
     formatBotMessage(text) {
+        // Convert newlines to HTML breaks
+        text = text.replace(/\n/g, '<br>');
+
         // Convert markdown-style formatting
         text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+
+        // Keep emoji support
         text = text.replace(/✅/g, '✅');
         text = text.replace(/📧/g, '📧');
 
-        // Convert numbered lists
-        text = text.replace(/^(\d+)\.\s/gm, '<br>$1. ');
+        // Convert numbered lists (already has line break)
+        text = text.replace(/^(\d+)\.\s/gm, '$1. ');
 
         return text;
     }
@@ -272,22 +277,12 @@ class BlowerChat {
             // Generate and download PDF
             this.quoteGenerator.downloadPDF(emailData);
 
-            // Show success message with download button
-            const downloadMessage = document.createElement('div');
-            downloadMessage.className = 'message bot';
-            downloadMessage.innerHTML = `
-                <div style="padding: 10px; background: #e8f5e9; border-radius: 8px;">
-                    <strong>✅ Quote Generated Successfully!</strong><br>
-                    Your PDF quote has been downloaded to your device.<br><br>
-                    <button onclick="blowerChat.quoteGenerator.downloadPDF(${JSON.stringify(emailData).replace(/"/g, '&quot;')})"
-                            style="padding: 8px 15px; background: #0066cc; color: white;
-                                   border: none; border-radius: 5px; cursor: pointer;">
-                        Download Quote Again
-                    </button>
-                </div>
-            `;
-            this.messagesContainer.appendChild(downloadMessage);
-            this.scrollToBottom();
+            // Show simple success message (no download button)
+            this.addMessage('bot',
+                '✅ **Quote Generated Successfully!**\n\n' +
+                'Your PDF quote has been downloaded to your device.\n' +
+                'We\'re also sending it to your email address.'
+            );
 
             // Try to send email via API
             this.sendQuoteEmail(emailData);
