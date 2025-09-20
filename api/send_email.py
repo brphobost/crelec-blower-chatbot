@@ -14,7 +14,7 @@ import urllib.request
 RESEND_API_KEY = os.getenv('RESEND_API_KEY', 're_YOUR_KEY_HERE')  # Get from resend.com
 FROM_EMAIL = "onboarding@resend.dev"  # Resend's test email (works immediately!)
 FROM_NAME = "Crelec Blower System"
-ADMIN_EMAIL = "crelec@live.co.za"
+ADMIN_EMAIL = "brkorkut@yahoo.com"  # Temporary for testing - change to crelec@live.co.za for production
 
 class handler(BaseHTTPRequestHandler):
     def do_OPTIONS(self):
