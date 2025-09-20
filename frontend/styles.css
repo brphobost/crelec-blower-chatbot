@@ -298,6 +298,30 @@ header p {
     opacity: 1;
 }
 
+/* Version indicator */
+.version-indicator {
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+    font-size: 11px;
+    color: var(--text-secondary);
+    opacity: 0.4;
+    font-family: var(--monospace-font, monospace);
+    background: rgba(255, 255, 255, 0.8);
+    padding: 2px 8px;
+    border-radius: 4px;
+    pointer-events: none;
+    z-index: 1000;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .version-indicator {
+        background: rgba(0, 0, 0, 0.5);
+        color: rgba(255, 255, 255, 0.4);
+    }
+}
+
 /* Responsive Design */
 @media (max-width: 600px) {
     .container {
