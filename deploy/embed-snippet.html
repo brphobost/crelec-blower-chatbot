@@ -1,0 +1,45 @@
+<!--
+    Crelec Chat Widget Installation Instructions
+    ============================================
+
+    To add the Crelec Blower Selection chatbot to your website,
+    simply copy and paste this code just before the closing </body> tag
+    on any page where you want the chat widget to appear.
+
+    The widget will appear as a floating button in the bottom-right corner
+    of your website. Clicking it opens the chat interface.
+-->
+
+<!-- Option 1: Simple Embed (Recommended) -->
+<script>
+(function() {
+    var script = document.createElement('script');
+    script.src = 'https://your-domain.netlify.app/widget-embed.js';
+    script.async = true;
+    document.body.appendChild(script);
+})();
+</script>
+
+<!-- Option 2: Iframe Embed (More Control) -->
+<!--
+<iframe
+    src="https://your-domain.netlify.app/widget.html"
+    width="400"
+    height="600"
+    style="border: none; position: fixed; bottom: 20px; right: 20px; z-index: 9999; border-radius: 15px; box-shadow: 0 10px 40px rgba(0,0,0,0.15);"
+    title="Crelec Blower Selection Assistant">
+</iframe>
+-->
+
+<!-- Option 3: Inline Embed (Full Page Section) -->
+<!--
+<div style="width: 100%; height: 600px; margin: 20px 0;">
+    <iframe
+        src="https://your-domain.netlify.app/"
+        width="100%"
+        height="100%"
+        style="border: 1px solid #e0e0e0; border-radius: 10px;"
+        title="Crelec Blower Selection Assistant">
+    </iframe>
+</div>
+-->

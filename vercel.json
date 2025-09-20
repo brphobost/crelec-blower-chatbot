@@ -1,0 +1,11 @@
+{
+  "rewrites": [
+    { "source": "/", "destination": "/frontend/index.html" },
+    { "source": "/widget.html", "destination": "/frontend/widget.html" },
+    { "source": "/widget-embed.js", "destination": "/deploy/widget-embed.js" },
+    { "source": "/chat.js", "destination": "/frontend/chat.js" },
+    { "source": "/styles.css", "destination": "/frontend/styles.css" },
+    { "source": "/assets/crelec.png", "destination": "/assets/crelec.png" },
+    { "source": "/assets/liberlocus.png", "destination": "/assets/liberlocus.png" }
+  ]
+}

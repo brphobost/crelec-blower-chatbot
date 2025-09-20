@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+blower_quotes.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Vercel
+.vercel
+*.log
+
+# Environment variables
+.env
+.env.local
+
+# Temporary files
+*.tmp
+.temp/
+
+# Backend specific
+backend/__pycache__/
+backend/api/__pycache__/

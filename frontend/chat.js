@@ -1,0 +1,267 @@
+/**
+ * Crelec Blower Selection Chat Interface
+ * Handles user interaction and API communication
+ */
+
+class BlowerChat {
+    constructor() {
+        // API configuration - Works for both local and production
+        this.apiUrl = window.location.hostname === 'localhost'
+            ? 'http://localhost:8000'
+            : '';
+
+        // Generate or retrieve session ID
+        this.sessionId = this.getSessionId();
+
+        // DOM elements
+        this.messagesContainer = document.getElementById('chat-messages');
+        this.inputField = document.getElementById('chat-input');
+        this.sendButton = document.getElementById('send-button');
+
+        // Initialize
+        this.init();
+    }
+
+    init() {
+        // Set up event listeners
+        this.sendButton.addEventListener('click', () => this.sendMessage());
+        this.inputField.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                this.sendMessage();
+            }
+        });
+
+        // Quick action buttons
+        document.querySelectorAll('.quick-action').forEach(button => {
+            button.addEventListener('click', (e) => {
+                this.handleQuickAction(e.target.dataset.action);
+            });
+        });
+
+        // Send initial greeting
+        this.addMessage('bot',
+            "Hi! I'll help you select the right blower for your needs. " +
+            "Let's start with your tank dimensions. " +
+            "Please enter the length, width, and height in meters (e.g., '6 3 2'):"
+        );
+
+        // Focus input
+        this.inputField.focus();
+    }
+
+    getSessionId() {
+        // Check if session exists in localStorage
+        let sessionId = localStorage.getItem('blower_chat_session');
+        if (!sessionId) {
+            sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            localStorage.setItem('blower_chat_session', sessionId);
+        }
+        return sessionId;
+    }
+
+    async sendMessage() {
+        const message = this.inputField.value.trim();
+        if (!message) return;
+
+        // Add user message to chat
+        this.addMessage('user', message);
+
+        // Clear input
+        this.inputField.value = '';
+        this.inputField.focus();
+
+        // Show typing indicator
+        this.showTypingIndicator();
+
+        try {
+            // Send to API
+            const response = await fetch(`${this.apiUrl}/api/chat`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    session_id: this.sessionId,
+                    message: message,
+                    context: {}
+                })
+            });
+
+            const data = await response.json();
+
+            // Remove typing indicator
+            this.hideTypingIndicator();
+
+            // Add bot response
+            this.addMessage('bot', data.message);
+
+            // If calculation is complete, show results
+            if (data.calculation && data.products) {
+                this.showResults(data.calculation, data.products, data.quote_id);
+            }
+
+        } catch (error) {
+            console.error('Error:', error);
+            this.hideTypingIndicator();
+            this.addMessage('bot',
+                'Sorry, I encountered an error. Please try again or contact support.'
+            );
+        }
+    }
+
+    addMessage(sender, text) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${sender}`;
+
+        // Process text for better formatting
+        if (sender === 'bot') {
+            text = this.formatBotMessage(text);
+        }
+
+        messageDiv.innerHTML = text;
+
+        // Add timestamp
+        const timestamp = document.createElement('div');
+        timestamp.className = 'timestamp';
+        timestamp.textContent = new Date().toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        messageDiv.appendChild(timestamp);
+
+        this.messagesContainer.appendChild(messageDiv);
+        this.scrollToBottom();
+    }
+
+    formatBotMessage(text) {
+        // Convert markdown-style formatting
+        text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        text = text.replace(/✅/g, '✅');
+        text = text.replace(/📧/g, '📧');
+
+        // Convert numbered lists
+        text = text.replace(/^(\d+)\.\s/gm, '<br>$1. ');
+
+        return text;
+    }
+
+    showResults(calculation, products, quoteId) {
+        const results = calculation.results;
+
+        // Create results card
+        const resultCard = document.createElement('div');
+        resultCard.className = 'result-card';
+
+        let html = `
+            <h3>📊 Calculation Results</h3>
+            <p><strong>Quote ID:</strong> ${quoteId}</p>
+            <div class="specs">
+                <p>📐 Tank Volume: ${results.tank_volume} m³</p>
+                <p>💨 Required Airflow: ${results.airflow_required} m³/hr</p>
+                <p>🎯 Required Pressure: ${results.pressure_required} mbar</p>
+                <p>⚡ Estimated Power: ${results.power_estimate} kW</p>
+            </div>
+        `;
+
+        if (products && products.length > 0) {
+            html += '<h3>🔧 Recommended Products</h3>';
+
+            products.forEach((product, index) => {
+                const stockClass = product.stock === 'In Stock' ? 'in-stock' : 'delivery';
+                html += `
+                    <div class="product-item">
+                        <div class="model">${index + 1}. ${product.model}</div>
+                        <div class="specs">
+                            Power: ${product.power} kW | Price: ${product.price}
+                        </div>
+                        <span class="stock ${stockClass}">${product.stock}</span>
+                    </div>
+                `;
+            });
+        }
+
+        html += `
+            <div style="margin-top: 15px;">
+                <button onclick="blowerChat.downloadQuote('${quoteId}')"
+                        style="padding: 8px 15px; background: #0066cc; color: white;
+                               border: none; border-radius: 5px; cursor: pointer;">
+                    Download Quote PDF
+                </button>
+            </div>
+        `;
+
+        resultCard.innerHTML = html;
+        this.messagesContainer.appendChild(resultCard);
+        this.scrollToBottom();
+    }
+
+    showTypingIndicator() {
+        const indicator = document.createElement('div');
+        indicator.className = 'message bot typing-indicator';
+        indicator.innerHTML = '<div class="loading"></div> Thinking...';
+        indicator.id = 'typing-indicator';
+        this.messagesContainer.appendChild(indicator);
+        this.scrollToBottom();
+    }
+
+    hideTypingIndicator() {
+        const indicator = document.getElementById('typing-indicator');
+        if (indicator) {
+            indicator.remove();
+        }
+    }
+
+    scrollToBottom() {
+        this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
+    }
+
+    handleQuickAction(action) {
+        switch(action) {
+            case 'new':
+                // Reset session and start new calculation
+                this.sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                localStorage.setItem('blower_chat_session', this.sessionId);
+                this.messagesContainer.innerHTML = '';
+                this.addMessage('bot',
+                    "Starting a new calculation. " +
+                    "Please enter your tank dimensions in meters (length width height):"
+                );
+                break;
+
+            case 'help':
+                this.addMessage('user', 'I need help');
+                this.addMessage('bot',
+                    "I can help you with:\n" +
+                    "• Calculating blower requirements\n" +
+                    "• Understanding specifications\n" +
+                    "• Product recommendations\n" +
+                    "• Getting quotes\n\n" +
+                    "For immediate assistance, contact:\n" +
+                    "📞 Phone: +27 (0) 12 345 6789\n" +
+                    "📧 Email: support@crelec.co.za"
+                );
+                break;
+        }
+    }
+
+    async downloadQuote(quoteId) {
+        try {
+            const response = await fetch(`${this.apiUrl}/api/quote/${quoteId}`);
+            const data = await response.json();
+
+            // For now, just show the data
+            console.log('Quote data:', data);
+            alert(`Quote ${quoteId} retrieved. PDF generation coming soon!`);
+
+            // TODO: Implement PDF generation and download
+        } catch (error) {
+            console.error('Error downloading quote:', error);
+            alert('Error downloading quote. Please contact support.');
+        }
+    }
+}
+
+// Initialize chat when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    window.blowerChat = new BlowerChat();
+});

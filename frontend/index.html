@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crelec Blower Selection Assistant</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <img src="/assets/crelec.png" alt="Crelec Logo" class="company-logo">
+            <h1>Blower Selection Assistant</h1>
+            <p>Get the right blower for your application in minutes</p>
+        </header>
+
+        <div id="chat-container">
+            <div id="chat-messages"></div>
+            <div id="chat-input-container">
+                <input
+                    type="text"
+                    id="chat-input"
+                    placeholder="Type your message..."
+                    autocomplete="off"
+                >
+                <button id="send-button">Send</button>
+            </div>
+        </div>
+
+        <div id="quick-actions">
+            <button class="quick-action" data-action="new">New Calculation</button>
+            <button class="quick-action" data-action="help">Need Help?</button>
+        </div>
+
+        <footer class="powered-by">
+            <span>Powered by</span>
+            <img src="/assets/liberlocus.png" alt="Liberlocus" class="liberlocus-logo">
+        </footer>
+    </div>
+
+    <script src="chat.js"></script>
+</body>
+</html>
