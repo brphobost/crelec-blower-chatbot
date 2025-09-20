@@ -301,24 +301,28 @@ header p {
 /* Version indicator */
 .version-indicator {
     position: fixed;
-    bottom: 10px;
-    right: 10px;
-    font-size: 11px;
-    color: var(--text-secondary);
-    opacity: 0.4;
-    font-family: var(--monospace-font, monospace);
-    background: rgba(255, 255, 255, 0.8);
-    padding: 2px 8px;
-    border-radius: 4px;
+    bottom: 15px;
+    right: 15px;
+    font-size: 12px;
+    color: #666;
+    opacity: 0.7;
+    font-family: 'Courier New', monospace;
+    background: rgba(240, 240, 240, 0.95);
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
     pointer-events: none;
     z-index: 1000;
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 /* Dark mode support */
 @media (prefers-color-scheme: dark) {
     .version-indicator {
-        background: rgba(0, 0, 0, 0.5);
-        color: rgba(255, 255, 255, 0.4);
+        background: rgba(40, 40, 40, 0.9);
+        color: rgba(255, 255, 255, 0.7);
+        border: 1px solid rgba(255, 255, 255, 0.1);
     }
 }
 
