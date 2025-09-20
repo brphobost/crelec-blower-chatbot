@@ -2,6 +2,11 @@
 
 A web-based chatbot for helping customers select the right blower for their applications. Features progressive data collection, automatic calculations, and embeddable widget for website integration.
 
+🚀 **Live Demo**: https://blower-chatbot.vercel.app/
+
+## Deployment Status
+Auto-deployed from GitHub via Vercel
+
 ## Features
 
 - 🚀 Simple chat interface for data collection
