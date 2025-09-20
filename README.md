@@ -4,6 +4,8 @@ A web-based chatbot for helping customers select the right blower for their appl
 
 🚀 **Live Demo**: https://blower-chatbot.vercel.app/
 
+✅ **Features**: Email collection, PDF quote generation, smart product matching
+
 ## Deployment Status
 Auto-deployed from GitHub via Vercel
 
