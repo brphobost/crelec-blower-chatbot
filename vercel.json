@@ -1,10 +1,13 @@
 {
   "rewrites": [
+    { "source": "/api/chat", "destination": "/api/chat_v2" },
     { "source": "/", "destination": "/frontend/index.html" },
     { "source": "/widget.html", "destination": "/frontend/widget.html" },
     { "source": "/widget-embed.js", "destination": "/deploy/widget-embed.js" },
     { "source": "/chat.js", "destination": "/frontend/chat.js" },
     { "source": "/styles.css", "destination": "/frontend/styles.css" },
+    { "source": "/quote-generator.js", "destination": "/frontend/quote-generator.js" },
+    { "source": "/products.json", "destination": "/frontend/products.json" },
     { "source": "/assets/crelec.png", "destination": "/assets/crelec.png" },
     { "source": "/assets/liberlocus.png", "destination": "/assets/liberlocus.png" }
   ]

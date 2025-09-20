@@ -18,6 +18,14 @@ class BlowerChat {
         this.inputField = document.getElementById('chat-input');
         this.sendButton = document.getElementById('send-button');
 
+        // Initialize quote generator
+        this.quoteGenerator = null;
+        try {
+            this.quoteGenerator = new QuoteGenerator();
+        } catch (e) {
+            console.log('Quote generator not available:', e);
+        }
+
         // Initialize
         this.init();
     }
@@ -95,8 +103,13 @@ class BlowerChat {
             // Add bot response
             this.addMessage('bot', data.message);
 
-            // If calculation is complete, show results
-            if (data.calculation && data.products) {
+            // If we need to send email with quote
+            if (data.send_email && data.email_data) {
+                this.handleQuoteGeneration(data.email_data);
+            }
+
+            // If calculation is complete, show results (legacy)
+            if (data.calculation && data.products && !data.send_email) {
                 this.showResults(data.calculation, data.products, data.quote_id);
             }
 
@@ -244,20 +257,55 @@ class BlowerChat {
         }
     }
 
-    async downloadQuote(quoteId) {
-        try {
-            const response = await fetch(`${this.apiUrl}/api/quote/${quoteId}`);
-            const data = await response.json();
-
-            // For now, just show the data
-            console.log('Quote data:', data);
-            alert(`Quote ${quoteId} retrieved. PDF generation coming soon!`);
-
-            // TODO: Implement PDF generation and download
-        } catch (error) {
-            console.error('Error downloading quote:', error);
-            alert('Error downloading quote. Please contact support.');
+    async handleQuoteGeneration(emailData) {
+        if (!this.quoteGenerator) {
+            // Fallback if quote generator not available
+            console.error('Quote generator not initialized');
+            this.addMessage('bot',
+                '⚠️ PDF generation is temporarily unavailable. ' +
+                'Please contact crelec@live.co.za directly with quote #' + emailData.quote_id
+            );
+            return;
         }
+
+        try {
+            // Since EmailJS requires setup, for now just download PDF
+            this.quoteGenerator.downloadPDF(emailData);
+
+            // Show success message with download button
+            const downloadMessage = document.createElement('div');
+            downloadMessage.className = 'message bot';
+            downloadMessage.innerHTML = `
+                <div style="padding: 10px; background: #e8f5e9; border-radius: 8px;">
+                    <strong>✅ Quote Generated Successfully!</strong><br>
+                    Your PDF quote has been downloaded to your device.<br><br>
+                    <button onclick="blowerChat.quoteGenerator.downloadPDF(${JSON.stringify(emailData).replace(/"/g, '&quot;')})"
+                            style="padding: 8px 15px; background: #0066cc; color: white;
+                                   border: none; border-radius: 5px; cursor: pointer;">
+                        Download Quote Again
+                    </button>
+                </div>
+            `;
+            this.messagesContainer.appendChild(downloadMessage);
+            this.scrollToBottom();
+
+            // Note about email functionality
+            this.addMessage('bot',
+                '📧 Note: Automatic email sending will be available soon. ' +
+                'For now, please email your quote to yourself or contact crelec@live.co.za for assistance.'
+            );
+
+        } catch (error) {
+            console.error('Error generating quote:', error);
+            this.addMessage('bot',
+                '❌ Error generating quote. Please contact support at crelec@live.co.za'
+            );
+        }
+    }
+
+    async downloadQuote(quoteId) {
+        // This function can be used for downloading existing quotes
+        console.log('Downloading quote:', quoteId);
     }
 }
 
