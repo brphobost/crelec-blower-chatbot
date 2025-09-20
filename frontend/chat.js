@@ -147,8 +147,8 @@ class BlowerChat {
     }
 
     formatBotMessage(text) {
-        // Convert newlines to HTML breaks
-        text = text.replace(/\n/g, '<br>');
+        // Convert escaped newlines (\n) to HTML breaks
+        text = text.replace(/\\n/g, '<br>');
 
         // Convert markdown-style formatting
         text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
@@ -274,14 +274,16 @@ class BlowerChat {
         }
 
         try {
-            // Generate and download PDF
-            this.quoteGenerator.downloadPDF(emailData);
+            // Generate PDF but DON'T download automatically
+            const pdf = this.quoteGenerator.generatePDF(emailData);
 
-            // Show simple success message (no download button)
+            // Store PDF for email but don't download
+            this.lastGeneratedPDF = pdf;
+
+            // Show success message without mentioning download
             this.addMessage('bot',
                 '✅ **Quote Generated Successfully!**\n\n' +
-                'Your PDF quote has been downloaded to your device.\n' +
-                'We\'re also sending it to your email address.'
+                'We\'re sending your detailed quote to your email address.'
             );
 
             // Try to send email via API
@@ -297,8 +299,8 @@ class BlowerChat {
 
     async sendQuoteEmail(emailData) {
         try {
-            // Generate PDF for attachment
-            const pdf = this.quoteGenerator.generatePDF(emailData);
+            // Use the already generated PDF
+            const pdf = this.lastGeneratedPDF || this.quoteGenerator.generatePDF(emailData);
             const pdfBlob = pdf.output('blob');
             const pdfBase64 = await this.blobToBase64(pdfBlob);
 
