@@ -1,6 +1,5 @@
 {
   "rewrites": [
-    { "source": "/api/chat", "destination": "/api/chat_v2" },
     { "source": "/", "destination": "/frontend/index.html" },
     { "source": "/widget.html", "destination": "/frontend/widget.html" },
     { "source": "/widget-embed.js", "destination": "/deploy/widget-embed.js" },
