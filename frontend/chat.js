@@ -269,7 +269,7 @@ class BlowerChat {
         }
 
         try {
-            // Since EmailJS requires setup, for now just download PDF
+            // Generate and download PDF
             this.quoteGenerator.downloadPDF(emailData);
 
             // Show success message with download button
@@ -289,11 +289,8 @@ class BlowerChat {
             this.messagesContainer.appendChild(downloadMessage);
             this.scrollToBottom();
 
-            // Note about email functionality
-            this.addMessage('bot',
-                '📧 Note: Automatic email sending will be available soon. ' +
-                'For now, please email your quote to yourself or contact crelec@live.co.za for assistance.'
-            );
+            // Try to send email via API
+            this.sendQuoteEmail(emailData);
 
         } catch (error) {
             console.error('Error generating quote:', error);
@@ -301,6 +298,52 @@ class BlowerChat {
                 '❌ Error generating quote. Please contact support at crelec@live.co.za'
             );
         }
+    }
+
+    async sendQuoteEmail(emailData) {
+        try {
+            // Generate PDF for attachment
+            const pdf = this.quoteGenerator.generatePDF(emailData);
+            const pdfBlob = pdf.output('blob');
+            const pdfBase64 = await this.blobToBase64(pdfBlob);
+
+            // Send email via our API
+            const response = await fetch('/api/send_email', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    to_email: emailData.customer_data.email,
+                    quote_id: emailData.quote_id,
+                    customer_data: emailData.customer_data,
+                    calculation: emailData.calculation,
+                    products: emailData.products,
+                    pdf_attachment: pdfBase64
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.status === 'success') {
+                this.addMessage('bot',
+                    `📧 We're processing your email to ${emailData.customer_data.email}. ` +
+                    `A copy will also be sent to our sales team.`
+                );
+            }
+        } catch (error) {
+            console.error('Error sending email:', error);
+            // Silently fail - PDF download is the primary method
+        }
+    }
+
+    blobToBase64(blob) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result.split(',')[1]);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
     }
 
     async downloadQuote(quoteId) {

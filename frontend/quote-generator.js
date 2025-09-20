@@ -168,8 +168,8 @@ class QuoteGenerator {
 
         doc.setFont(undefined, 'normal');
         doc.setFontSize(9);
-        doc.text(`📧 ${this.company.email}`, 20, y);
-        doc.text(`📞 ${this.company.phone}`, 80, y);
+        doc.text(`Email: ${this.company.email}`, 20, y);
+        doc.text(`Phone: ${this.company.phone}`, 120, y);
 
         // Footer
         y = pageHeight - 20;
