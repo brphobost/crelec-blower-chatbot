@@ -3,7 +3,7 @@
 ## Project Overview
 An intelligent chatbot system for Crelec S.A. that helps end-users select the right blower for their applications through a conversational interface. The system calculates requirements based on user inputs, matches products from inventory, and generates professional PDF quotes.
 
-## Current Version: v1.1.0
+## Current Version: v1.1.1
 - **Live URL**: https://blower-chatbot.vercel.app
 - **Repository**: https://github.com/brphobost/crelec-blower-chatbot
 - **Deployment**: Vercel (auto-deploys from GitHub)
@@ -141,6 +141,27 @@ An intelligent chatbot system for Crelec S.A. that helps end-users select the ri
 - Vercel for hosting and auto-deployment
 - Free tier services throughout
 
+## ⚠️ IMPORTANT: VERSION MANAGEMENT
+
+### When Making Changes:
+**ALWAYS UPDATE VERSION NUMBERS** in these locations:
+1. `CLAUDE.md` - Current Version section (line 6)
+2. `frontend/index.html` - Version indicator (line 49)
+3. `frontend/widget.html` - Version indicator (line 60)
+
+### Version Numbering Scheme:
+- **Major changes** (new features): v1.2.0 → v1.3.0
+- **Minor updates** (improvements): v1.1.0 → v1.1.1
+- **Bug fixes only**: v1.1.1 → v1.1.2
+
+### Example:
+```bash
+# After making changes, update all three files:
+# CLAUDE.md: ## Current Version: v1.1.2
+# index.html: <div class="version-indicator">v1.1.2</div>
+# widget.html: <div style="...">v1.1.2</div>
+```
+
 ## 📝 Development Guidelines
 
 ### To Add New Products:
@@ -214,7 +235,15 @@ vercel --prod
 
 ## 📈 Changelog
 
-### v1.1.0 (Current)
+### v1.1.1 (Current - Sept 21, 2025)
+- Fixed newline characters (\n) showing as text in chat
+- Removed "Download Quote Again" button for better lead tracking
+- Switched from SendGrid to Resend for easier email testing
+- Changed admin CC to developer email during testing
+- Fixed PDF encoding issues (removed emojis)
+- Added version management instructions
+
+### v1.1.0
 - Fixed API routing issue
 - Enabled email collection
 - Added product matching
