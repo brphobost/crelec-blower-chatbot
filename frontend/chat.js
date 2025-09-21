@@ -351,8 +351,8 @@ class BlowerChat {
             // Add session ID to the data
             emailData.session_id = this.getSessionId();
 
-            // Save to our API
-            const response = await fetch('/api/save_quote', {
+            // Save to flexible logger (adapts to any data structure)
+            const response = await fetch('/api/flexible_logger', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
