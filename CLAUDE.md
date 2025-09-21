@@ -3,7 +3,7 @@
 ## Project Overview
 An intelligent chatbot system for Crelec S.A. that helps end-users select the right blower for their applications through a conversational interface. The system calculates requirements based on user inputs, matches products from inventory, and generates professional PDF quotes.
 
-## Current Version: v1.2.0
+## Current Version: v1.3.0-dev
 - **Live URL**: https://blower-chatbot.vercel.app
 - **Repository**: https://github.com/brphobost/crelec-blower-chatbot
 - **Deployment**: Vercel (auto-deploys from GitHub)
@@ -65,13 +65,9 @@ An intelligent chatbot system for Crelec S.A. that helps end-users select the ri
 ## 🚧 Known Issues / Limitations
 
 ### Current Limitations:
-1. **Email Sending**: Currently only downloads PDF locally (EmailJS integration pending)
+1. **Email Sending**: Using Resend API (temporary for testing, needs production setup)
 2. **Products Database**: Static JSON file (needs manual updates)
-3. **Calculations**: Simplified model without:
-   - Pipe friction losses
-   - Multiple blower configurations (series/parallel)
-   - Different tank geometries (only rectangular)
-   - Temperature/humidity corrections
+3. **Calculations**: Basic model - see Advanced Calculator Development section below
 4. **Admin Features**: No dashboard or analytics
 5. **Stock Integration**: Manual stock status updates required
 
@@ -233,9 +229,156 @@ git push
 vercel --prod
 ```
 
+## 🔬 Advanced Calculator Development (In Progress)
+
+### Research Findings - Industry Standard Calculations
+
+#### 1. **Critical Parameters from Crelec Form**
+The existing Crelec form captures essential data:
+- **Tank geometry**: Multiple tanks, series/parallel configurations
+- **Pipe specifications**: Diameter, length, 90° bends
+- **Environmental factors**: Altitude, temperature
+- **Diffuser type**: 7x25mm galvanized pipes, 2mm holes, 400mm apart
+- **Application specifics**: Depth, water type (wet/dusty/sea/gas)
+
+#### 2. **Industry-Standard Calculation Methods**
+
+**Wastewater Treatment:**
+```
+Pressure Required = Static Head + Friction Losses + Diffuser Loss
+- Static Head = Depth(m) × 98.1 mbar/m
+- Friction Loss = f × (L/D) × (ρv²/2)
+- Diffuser Loss = 50-150 mbar (fine bubble)
+```
+
+**Aquaculture/Fish Farming:**
+```
+Airflow = Pond Area(m²) × 0.0015-0.0025 m³/min
+Pressure = Depth(m) × 98.1 + 20-50 mbar (diffuser)
+Oxygen Transfer: 1.3 kg O2/kWh under standard conditions
+```
+
+#### 3. **Missing Elements from Current Simple Calculator**
+- **Oxygen Transfer Efficiency (SOTE)**: 2-6% for coarse, 15-25% for fine bubble
+- **Alpha Factor**: 0.4-0.8 for wastewater (O2 transfer efficiency vs clean water)
+- **Beta Factor**: 0.9-0.98 (O2 solubility in wastewater vs clean water)
+- **Temperature Correction**: θ^(T-20) factor for biological activity
+- **Multiple Blower Interaction**: Parallel reduces pressure, series increases
+- **Pipe Network Analysis**: Using Darcy-Weisbach equation
+- **Diffuser Fouling Factor**: 1.5-2.0 over system lifetime
+
+#### 4. **Manufacturer Specifications**
+- **Goorui GHBH series**: 0-2400 m³/h, 0-1000 mbar
+- **Performance curves**: Tested at 15°C, sea level
+- **Altitude/temperature corrections**: Required for accurate selection
+- **Sirocco models**: Similar range, different efficiency curves
+
+### Implementation Progress
+
+#### ✅ Completed Modules
+
+##### 1. **Smart Location Handler** (`backend/location_handler.py`)
+- Intelligent extraction of altitude/temperature from user input
+- Database of 20+ South African cities with climate data
+- Automatic altitude correction calculations
+- Clear communication of assumptions
+- Fallback strategies for missing data
+
+**Key Features:**
+- Pattern recognition: "1500m", "Johannesburg", "sea level"
+- Fuzzy matching for city names and aliases
+- Correction factor calculations (pressure, flow, power)
+- User-friendly messages about impact
+
+#### 🚧 Next Steps (Priority Order)
+
+##### Phase 1: Core Calculator Engine
+1. **Tank Geometry Module**
+   - Rectangular, cylindrical, irregular shapes
+   - Multiple tank configurations (series/parallel)
+   - Volume and surface area calculations
+
+2. **Pressure Calculation Module**
+   - Static head (depth-based)
+   - Pipe friction losses (Darcy-Weisbach)
+   - Fitting losses (elbows, valves, tees)
+   - Diffuser pressure drop database
+
+3. **Flow Calculation Module**
+   - Oxygen demand calculations
+   - SOTE-based airflow requirements
+   - Safety factors and turndown ratios
+
+##### Phase 2: Advanced Features
+4. **Pipe Network Solver**
+   - Complex branching systems
+   - Pressure drop distribution
+   - Velocity checks for erosion
+
+5. **Oxygen Transfer Module**
+   - Alpha/Beta factor corrections
+   - Temperature effects on DO saturation
+   - Process-specific oxygen demands
+
+6. **Blower Selection Logic**
+   - Performance curve matching
+   - Efficiency point optimization
+   - Multiple blower configurations
+
+##### Phase 3: Integration
+7. **Product Matching Engine**
+   - Goorui/Sirocco curve database
+   - Operating point analysis
+   - Efficiency and power calculations
+
+8. **Validation and Testing**
+   - Compare with Excel calculator
+   - Industry standard verification
+   - Edge case handling
+
+### Calculator Architecture
+
+```
+User Input (Chat Interface)
+    ↓
+Location Handler (altitude/temp)
+    ↓
+Application Selector (wastewater/aquaculture/industrial)
+    ↓
+Tank Configuration Module
+    ↓
+Flow Requirements Calculator
+    ↓
+Pressure Requirements Calculator
+    ↓
+Correction Factors Application
+    ↓
+Blower Selection Engine
+    ↓
+Product Matching & Recommendations
+    ↓
+Quote Generation
+```
+
+### Technical Stack for Calculator
+- **Python 3.8+** for calculation engine
+- **NumPy** for numerical computations
+- **SciPy** for optimization and curve fitting
+- **Pandas** for data handling
+- **Modular design** for easy testing and maintenance
+
+---
+
 ## 📈 Changelog
 
-### v1.2.0 (Current - Sept 21, 2025)
+### v1.3.0-dev (In Development - Sept 21, 2025)
+- **Advanced Calculator Development Started**
+- Created smart location handler with SA cities database
+- Implemented altitude/temperature correction calculations
+- Research completed on industry-standard methods
+- Documented calculation requirements and next steps
+
+### v1.2.0 (Sept 21, 2025)
 - **New Feature:** Quote database logging system
 - All quotes automatically saved with full details
 - Google Sheets integration for easy access
