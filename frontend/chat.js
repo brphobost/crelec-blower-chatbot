@@ -289,6 +289,9 @@ class BlowerChat {
             // Try to send email via API
             this.sendQuoteEmail(emailData);
 
+            // Save quote to database
+            this.saveQuoteToDatabase(emailData);
+
         } catch (error) {
             console.error('Error generating quote:', error);
             this.addMessage('bot',
@@ -341,6 +344,38 @@ class BlowerChat {
             reader.onerror = reject;
             reader.readAsDataURL(blob);
         });
+    }
+
+    async saveQuoteToDatabase(emailData) {
+        try {
+            // Add session ID to the data
+            emailData.session_id = this.getSessionId();
+
+            // Save to our API
+            const response = await fetch('/api/save_quote', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(emailData)
+            });
+
+            const result = await response.json();
+            console.log('Quote saved:', result);
+
+            // Optionally save to Google Sheets if configured
+            fetch('/api/sheets_storage', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(emailData)
+            }).catch(err => console.log('Sheets logging failed:', err));
+
+        } catch (error) {
+            console.error('Error saving quote:', error);
+            // Don't show error to user - this is background logging
+        }
     }
 
     async downloadQuote(quoteId) {
