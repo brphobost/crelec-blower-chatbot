@@ -41,6 +41,13 @@ def match_products(airflow_required, pressure_required):
             score = 70
             match_type = "Higher Capacity Option"
 
+        # For very small requirements, recommend smallest suitable blower (60 points)
+        elif (airflow_required < product['airflow_min'] and
+              pressure_required <= product['pressure_max']):
+            # Give preference to smallest oversized unit
+            score = 60 - (product['airflow_min'] - airflow_required) / 10
+            match_type = "Minimum Size Available"
+
         # Stock status bonus
         if score > 0:
             if product['stock_status'] == 'in_stock':
