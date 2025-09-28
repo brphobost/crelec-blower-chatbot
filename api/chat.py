@@ -97,69 +97,138 @@ class handler(BaseHTTPRequestHandler):
         # State machine for conversation flow
         if session['state'] == 'welcome':
             response['message'] = (
-                "Hi! I'll help you select the right blower for your needs. "
-                "Let's start with your tank dimensions. "
-                "Please enter the length, width, and height in meters (e.g., '6 3 2'):"
+                "Welcome! Let's select the right blower for your needs.\\n\\n"
+                "First, what type of operation do you need?\\n\\n"
+                "1️⃣ **Compression** (Blowing air into tanks, aeration)\\n"
+                "2️⃣ **Vacuum** (Suction, extraction, conveying)\\n\\n"
+                "Please type 1 for Compression or 2 for Vacuum:"
+            )
+            session['state'] = 'operation_type'
+
+        elif session['state'] == 'operation_type':
+            if '1' in message or 'compression' in message.lower():
+                session['data']['operation'] = 'compression'
+                response['message'] = (
+                    "✅ Compression/Blowing selected.\\n\\n"
+                    "Who will be handling the installation?\\n\\n"
+                    "1️⃣ **Self** (DIY installation)\\n"
+                    "2️⃣ **Consultant/Contractor** (Professional installation)\\n\\n"
+                    "Please type 1 or 2:"
+                )
+                session['state'] = 'installation'
+            elif '2' in message or 'vacuum' in message.lower():
+                session['data']['operation'] = 'vacuum'
+                response['message'] = (
+                    "✅ Vacuum/Suction selected.\\n\\n"
+                    "Who will be handling the installation?\\n\\n"
+                    "1️⃣ **Self** (DIY installation)\\n"
+                    "2️⃣ **Consultant/Contractor** (Professional installation)\\n\\n"
+                    "Please type 1 or 2:"
+                )
+                session['state'] = 'installation'
+            else:
+                response['message'] = "Please type 1 for Compression or 2 for Vacuum:"
+
+        elif session['state'] == 'installation':
+            if '1' in message or 'self' in message.lower():
+                session['data']['installation'] = 'self'
+                install_msg = "Self-installation"
+            elif '2' in message or 'consultant' in message.lower():
+                session['data']['installation'] = 'consultant'
+                install_msg = "Professional installation"
+            else:
+                response['message'] = "Please type 1 for Self or 2 for Consultant/Contractor:"
+                return response
+
+            response['message'] = (
+                f"✅ {install_msg} noted.\\n\\n"
+                "What's the altitude of your installation site?\\n"
+                "You can provide:\\n"
+                "• Altitude in meters (e.g., '1420m')\\n"
+                "• City name (e.g., 'Johannesburg')\\n"
+                "• 'Sea level' or 'coastal'\\n\\n"
+                "Location or altitude:"
+            )
+            session['state'] = 'altitude'
+
+        elif session['state'] == 'altitude':
+            # Store altitude info
+            session['data']['altitude_text'] = message
+            # Simple altitude parsing (will be enhanced with location handler)
+            try:
+                altitude = float(re.findall(r'\d+', message)[0]) if re.findall(r'\d+', message) else 500
+            except:
+                altitude = 500
+            session['data']['altitude'] = altitude
+
+            response['message'] = (
+                f"✅ Location confirmed: {altitude}m altitude\\n\\n"
+                "What's your application?\\n\\n"
+                "1️⃣ **Waste Water Treatment** (aeration tanks)\\n"
+                "2️⃣ **Fish Farming/Aquaculture**\\n"
+                "3️⃣ **Industrial Process** (general)\\n\\n"
+                "Please select 1-3:"
+            )
+            session['state'] = 'application'
+
+        elif session['state'] == 'application':
+            if '1' in message or 'waste' in message.lower():
+                session['data']['application'] = 'waste_water'
+                app_msg = "Waste Water Treatment"
+            elif '2' in message or 'fish' in message.lower():
+                session['data']['application'] = 'fish_hatchery'
+                app_msg = "Fish Farming/Aquaculture"
+            else:
+                session['data']['application'] = 'industrial'
+                app_msg = "Industrial Process"
+
+            response['message'] = (
+                f"✅ {app_msg} selected.\\n\\n"
+                "**OPERATIONAL DATA**\\n\\n"
+                "Let's start with your tank/system dimensions.\\n"
+                "Please provide tank size in meters:\\n\\n"
+                "• Length × Width × Depth (e.g., '6 3 2')\\n\\n"
+                "Tank dimensions:"
             )
             session['state'] = 'dimensions'
 
         elif session['state'] == 'dimensions':
             try:
-                parts = message.replace(',', ' ').split()
+                parts = message.replace(',', ' ').replace('x', ' ').replace('×', ' ').split()
                 if len(parts) >= 3:
                     length, width, height = map(float, parts[:3])
-                    session['data'] = {'length': length, 'width': width, 'height': height}
-                    session['state'] = 'altitude'
+                    session['data']['length'] = length
+                    session['data']['width'] = width
+                    session['data']['height'] = height
+                    session['state'] = 'calculating'
+
+                    # Trigger calculation
+                    tank_volume = length * width * height
                     response['message'] = (
-                        f"Got it! Tank dimensions: {length}m × {width}m × {height}m\\n"
-                        "Now, what's your facility's altitude above sea level in meters?"
+                        f"✅ Tank dimensions: {length}m × {width}m × {height}m = {tank_volume:.0f}m³\\n\\n"
+                        "Calculating your blower requirements...\\n"
                     )
+                    # Continue to calculation...
+                    session['state'] = 'complete'
                 else:
-                    response['message'] = "Please enter three numbers for length, width, and height."
+                    response['message'] = "Please enter three numbers for length, width, and height (e.g., '6 3 2'):"
             except ValueError:
                 response['message'] = "Please enter three valid numbers in meters (e.g., '6 3 2'):"
 
-        elif session['state'] == 'altitude':
-            try:
-                altitude = float(message.split()[0])
-                session['data']['altitude'] = altitude
-                session['state'] = 'application'
-                response['message'] = (
-                    f"Altitude set to {altitude}m above sea level.\\n"
-                    "What's your application? Choose one:\\n"
-                    "1. Waste Water Treatment\\n"
-                    "2. Fish Hatchery\\n"
-                    "3. General Industrial"
-                )
-            except ValueError:
-                session['data']['altitude'] = 500
-                session['state'] = 'application'
-                response['message'] = (
-                    "I'll use 500m as the altitude for now.\\n"
-                    "What's your application? Choose one:\\n"
-                    "1. Waste Water Treatment\\n"
-                    "2. Fish Hatchery\\n"
-                    "3. General Industrial"
-                )
-
-        elif session['state'] == 'application':
-            # Determine application type
-            msg_lower = message.lower()
-            if '1' in msg_lower or 'waste' in msg_lower:
-                app_type = 'waste_water'
-                air_changes = 6
-            elif '2' in msg_lower or 'fish' in msg_lower:
-                app_type = 'fish_hatchery'
-                air_changes = 10
-            else:
-                app_type = 'general'
-                air_changes = 4
-
-            session['data']['application_type'] = app_type
-
-            # Calculate requirements
+        elif session['state'] == 'complete':
+            # Calculation complete state
+            # Calculate requirements using collected data
             data = session['data']
             tank_volume = data['length'] * data['width'] * data['height']
+
+            # Set air changes based on application
+            if data.get('application') == 'waste_water':
+                air_changes = 6
+            elif data.get('application') == 'fish_hatchery':
+                air_changes = 10
+            else:
+                air_changes = 4
+
             airflow_required = round(tank_volume * air_changes * 1.2, 1)  # 1.2 safety factor
 
             # Pressure calculation
