@@ -168,78 +168,192 @@ async def chat(message: ChatMessage):
             return response
 
         session['data']['operation_type'] = operation
-        chat_state.update_session(message.session_id, 'dimensions', {'operation_type': operation})
+        chat_state.update_session(message.session_id, 'installation', {'operation_type': operation})
 
         response['message'] = (
             f"✅ {operation_display} selected.\n\n"
-            "Now, let's size your system. "
-            "Please enter your tank dimensions in meters (length width height):\n"
-            "For example: '6 3 2'"
+            "Who will be handling the installation?\n\n"
+            "1️⃣ **Self** (DIY installation)\n"
+            "2️⃣ **Consultant/Contractor** (Professional installation)\n\n"
+            "Please type 1 or 2:"
         )
 
-    elif current_state == 'dimensions':
-        # Parse dimensions
-        try:
-            parts = message.message.replace(',', ' ').split()
-            if len(parts) >= 3:
-                length, width, height = map(float, parts[:3])
-                data = {'length': length, 'width': width, 'height': height}
-                chat_state.update_session(message.session_id, 'altitude', data)
-                response['message'] = (
-                    f"Got it! Tank dimensions: {length}m × {width}m × {height}m\n"
-                    "Now, what's your facility's altitude above sea level in meters? "
-                    "(Or tell me your city/location and I'll look it up)"
-                )
-            else:
-                response['message'] = (
-                    "I need three numbers for length, width, and height. "
-                    "Please enter them separated by spaces (e.g., '6 3 2'):"
-                )
-        except ValueError:
+    elif current_state == 'installation':
+        # Parse installation type
+        user_msg_lower = message.message.lower().strip()
+
+        if '1' in user_msg or 'self' in user_msg_lower or 'diy' in user_msg_lower:
+            installation = 'self'
+            install_display = 'Self-installation'
+        elif '2' in user_msg or 'consultant' in user_msg_lower or 'contractor' in user_msg_lower or 'professional' in user_msg_lower:
+            installation = 'consultant'
+            install_display = 'Professional installation'
+        else:
             response['message'] = (
-                "I couldn't understand those dimensions. "
-                "Please enter three numbers in meters (e.g., '6 3 2'):"
+                "Please select installation type:\n"
+                "1 - Self installation\n"
+                "2 - Consultant/Contractor"
             )
+            return response
+
+        session['data']['installation'] = installation
+        chat_state.update_session(message.session_id, 'altitude', {'installation': installation})
+
+        response['message'] = (
+            f"✅ {install_display} noted.\n\n"
+            "What's the altitude of your installation site?\n"
+            "You can provide:\n"
+            "• Altitude in meters (e.g., '1420m')\n"
+            "• City name (e.g., 'Johannesburg')\n"
+            "• 'Sea level' or 'coastal'\n\n"
+            "Location or altitude:"
+        )
+
 
     elif current_state == 'altitude':
-        # Parse altitude or location
-        try:
-            # Try to parse as number first
-            altitude = float(message.message.split()[0])
-            session['data']['altitude'] = altitude
-            chat_state.update_session(message.session_id, 'application', {})
-            response['message'] = (
-                f"Altitude set to {altitude}m above sea level.\n"
-                "What's your application? Choose one:\n"
-                "1. Waste Water Treatment\n"
-                "2. Fish Hatchery\n"
-                "3. General Industrial"
-            )
-        except ValueError:
-            # TODO: Implement location to altitude lookup
-            # For now, use a default
-            session['data']['altitude'] = 500
-            chat_state.update_session(message.session_id, 'application', {'altitude': 500})
-            response['message'] = (
-                f"I'll use 500m as the altitude for now.\n"
-                "What's your application? Choose one:\n"
-                "1. Waste Water Treatment\n"
-                "2. Fish Hatchery\n"
-                "3. General Industrial"
-            )
+        # Parse altitude or location using location handler
+        from location_handler import LocationHandler
+
+        handler = LocationHandler()
+        location_data = handler.process_location_input(message.message)
+
+        session['data']['altitude'] = location_data.altitude
+        session['data']['temperature'] = location_data.temperature
+        session['data']['location'] = location_data.city if location_data.city else message.message
+
+        chat_state.update_session(message.session_id, 'application', {
+            'altitude': location_data.altitude,
+            'temperature': location_data.temperature
+        })
+
+        # Build response with location info
+        altitude_msg = f"✅ Location confirmed: {location_data.altitude}m altitude"
+        if location_data.city:
+            altitude_msg += f" ({location_data.city.title()})"
+
+        response['message'] = (
+            f"{altitude_msg}\n\n"
+            "What's your application?\n\n"
+            "1️⃣ **Waste Water Treatment** (aeration tanks)\n"
+            "2️⃣ **Fish Farming/Aquaculture**\n"
+            "3️⃣ **Industrial Process** (general)\n"
+            "4️⃣ **Other** (describe)\n\n"
+            "Please select 1-4:"
+        )
 
     elif current_state == 'application':
         # Determine application type
         if '1' in user_msg or 'waste' in user_msg:
             app_type = 'waste_water'
+            app_display = 'Waste Water Treatment'
         elif '2' in user_msg or 'fish' in user_msg:
             app_type = 'fish_hatchery'
+            app_display = 'Fish Farming/Aquaculture'
+        elif '3' in user_msg or 'industrial' in user_msg:
+            app_type = 'industrial'
+            app_display = 'Industrial Process'
         else:
-            app_type = 'general'
+            app_type = 'other'
+            app_display = 'Other Application'
 
         session['data']['application_type'] = app_type
-        chat_state.update_session(message.session_id, 'calculating', {})
+        chat_state.update_session(message.session_id, 'dimensions', {'application_type': app_type})
 
+        response['message'] = (
+            f"✅ {app_display} selected.\n\n"
+            "**OPERATIONAL DATA**\n\n"
+            "Let's start with your tank/system dimensions.\n"
+            "Please provide tank size in meters:\n\n"
+            "• Length × Width × Depth (e.g., '6 3 2')\n"
+            "• Or total volume in m³ (e.g., '36')\n\n"
+            "Tank dimensions:"
+        )
+        return response
+
+    elif current_state == 'dimensions':
+        # Now parse the actual dimensions after application
+        try:
+            parts = message.message.replace(',', ' ').replace('x', ' ').replace('×', ' ').split()
+            if len(parts) >= 3:
+                length, width, height = map(float, parts[:3])
+                data = {'length': length, 'width': width, 'height': height}
+                chat_state.update_session(message.session_id, 'num_tanks', data)
+                volume = length * width * height
+                response['message'] = (
+                    f"✅ Tank: {length}m × {width}m × {height}m = {volume:.0f}m³\n\n"
+                    "How many tanks do you have?\n"
+                    "(Enter number, e.g., '1' or '3'):"
+                )
+            elif len(parts) == 1:
+                # Direct volume entry
+                volume = float(parts[0])
+                # Estimate dimensions
+                side = (volume ** (1/3))
+                data = {
+                    'length': side * 1.5,
+                    'width': side,
+                    'height': side * 0.67,
+                    'volume': volume
+                }
+                chat_state.update_session(message.session_id, 'num_tanks', data)
+                response['message'] = (
+                    f"✅ Tank volume: {volume}m³\n\n"
+                    "How many tanks do you have?\n"
+                    "(Enter number, e.g., '1' or '3'):"
+                )
+            else:
+                response['message'] = (
+                    "Please enter dimensions as:\n"
+                    "• Length Width Depth (e.g., '6 3 2')\n"
+                    "• Or total volume (e.g., '36')"
+                )
+        except ValueError:
+            response['message'] = (
+                "I couldn't understand those dimensions.\n"
+                "Please enter as 'Length Width Depth' (e.g., '6 3 2')"
+            )
+        return response
+
+    elif current_state == 'num_tanks':
+        # Parse number of tanks
+        try:
+            num_tanks = int(message.message.strip())
+            session['data']['num_tanks'] = num_tanks
+            chat_state.update_session(message.session_id, 'pipe_details', {'num_tanks': num_tanks})
+
+            total_volume = session['data'].get('volume',
+                session['data']['length'] * session['data']['width'] * session['data']['height']) * num_tanks
+
+            response['message'] = (
+                f"✅ {num_tanks} tank(s), total volume: {total_volume:.0f}m³\n\n"
+                "**PIPING DETAILS**\n\n"
+                "What's the pipe diameter to your tanks? (mm)\n"
+                "Common sizes: 40mm, 50mm, 100mm, 150mm\n\n"
+                "Pipe diameter:"
+            )
+        except ValueError:
+            response['message'] = "Please enter the number of tanks (e.g., '1' or '3'):"
+        return response
+
+    elif current_state == 'pipe_details':
+        # Parse pipe diameter
+        try:
+            pipe_dia = float(message.message.replace('mm', '').strip())
+            session['data']['pipe_diameter'] = pipe_dia
+            chat_state.update_session(message.session_id, 'calculating', {'pipe_diameter': pipe_dia})
+
+            # Skip detailed pipe questions for now and calculate
+            session['data']['pipe_length'] = 50  # Default
+            session['data']['num_bends'] = 4  # Default
+
+            # Trigger calculation
+            chat_state.update_session(message.session_id, 'calculating', {})
+            # Fall through to calculating state
+        except ValueError:
+            response['message'] = "Please enter pipe diameter in mm (e.g., '100' or '150mm'):"
+            return response
+
+    elif current_state == 'calculating':
         # Perform calculation
         calc_result = calculator.calculate_from_form_data(session['data'])
 
