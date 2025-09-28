@@ -46,14 +46,9 @@ class BlowerChat {
             });
         });
 
-        // Show initial greeting directly (backend integration having issues on Vercel)
-        this.addMessage('bot',
-            "Welcome! Let's select the right blower for your needs.\n\n" +
-            "First, what type of operation do you need?\n\n" +
-            "1️⃣ **Compression** (Blowing air into tanks, aeration)\n" +
-            "2️⃣ **Vacuum** (Suction, extraction, conveying)\n\n" +
-            "Please type 1 for Compression or 2 for Vacuum:"
-        );
+        // Don't show initial greeting - let backend handle it
+        // Send empty message to get initial greeting from backend
+        this.sendInitialMessage();
 
         // Focus input
         this.inputField.focus();
