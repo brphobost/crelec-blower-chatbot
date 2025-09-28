@@ -3,7 +3,7 @@
 ## Project Overview
 An intelligent chatbot system for Crelec S.A. that helps end-users select the right blower for their applications through a conversational interface. The system calculates requirements based on user inputs, matches products from inventory, and generates professional PDF quotes.
 
-## Current Version: v1.4.0
+## Current Version: v1.4.2
 - **Live URL**: https://blower-chatbot.vercel.app
 - **Repository**: https://github.com/brphobost/crelec-blower-chatbot
 - **Deployment**: Vercel (auto-deploys from GitHub)
@@ -136,6 +136,57 @@ An intelligent chatbot system for Crelec S.A. that helps end-users select the ri
 - GitHub for version control
 - Vercel for hosting and auto-deployment
 - Free tier services throughout
+
+## 🎯 Key Decisions & Learnings (Sept 28, 2025)
+
+### 1. Multiple Blower Configurations = MASSIVE Energy Savings
+- Discovered 51-91% energy savings possible with parallel configurations
+- 3 small blowers use 83% less power than 1 large blower over daily cycle
+- Affinity Laws: Power = Speed³ (cubic relationship is key!)
+- Payback period often < 1 year from energy savings alone
+
+### 2. Altitude Corrections Are Critical for SA
+- Johannesburg (1750m) requires 26% larger blowers than sea level
+- Created comprehensive SA cities database with altitudes
+- Automatic correction factors prevent undersized equipment
+
+### 3. Chat Flow Must Match Existing Forms
+- Users expect familiar order from paper forms
+- Changed to match exact Crelec form: Operation → Installation → Altitude → Application → Dimensions
+- Progressive disclosure reduces cognitive load
+
+### 4. Vercel Architecture Gotcha
+- **LESSON LEARNED**: Vercel uses `/api/` folder for serverless functions
+- `/api/chat.py` is production, `/backend/app.py` is development
+- Must update BOTH files when changing logic
+- Frontend can have fallback messages for resilience
+
+### 5. Version Tracking Is Essential
+- Added visible version number (bottom right) for deployment verification
+- Helps identify caching issues immediately
+- Update in 3 places: CLAUDE.md, index.html, widget.html
+
+## 🔮 Next Priority Enhancements
+
+### Immediate (High Impact)
+1. **Display Configuration Comparison Table** in frontend
+   - Show energy savings visually
+   - Highlight recommended configuration
+   - Include payback period
+
+2. **Product Matching** to configurations
+   - Map actual Crelec products to each configuration
+   - Show 2×600m³/hr vs 1×1200m³/hr options
+
+3. **PDF Quote Enhancement**
+   - Include configuration comparison
+   - Show energy savings calculations
+   - Add installation type considerations
+
+### Future Considerations
+- Integration with Crelec's inventory system
+- WhatsApp Business API for mobile users
+- Historical quote tracking and follow-up
 
 ## ⚠️ IMPORTANT: VERSION MANAGEMENT
 
@@ -369,7 +420,58 @@ Quote Generation
 
 ---
 
+## ⚠️ CRITICAL ARCHITECTURE NOTES
+
+### Vercel Deployment Structure
+**IMPORTANT**: Vercel uses `/api/chat.py` as the serverless function endpoint, NOT `/backend/app.py`!
+- `/api/chat.py` - This is what runs on Vercel production
+- `/backend/app.py` - Local development server only
+- Always update BOTH when changing chat flow logic
+
+### Current Chat Flow (v1.4.2)
+Following exact Crelec form order:
+1. **Operation Type** → Compression or Vacuum
+2. **Installation** → Self or Consultant
+3. **Altitude** → Location/city with smart detection
+4. **Application** → Waste Water, Fish Farm, Industrial
+5. **Operational Data** → Tank dimensions, number of tanks, piping
+6. **Results** → Calculations with recommendations
+
+## 🚀 Major Technical Achievements
+
+### Advanced Modules Created (Sept 2025)
+1. **location_handler.py** - Smart SA cities database with altitude/temperature
+   - 20+ South African cities with climate data
+   - Altitude correction calculations (e.g., Johannesburg needs 26% larger blowers)
+   - Fuzzy matching for city names
+
+2. **blower_configuration.py** - Multiple blower optimizer
+   - Shows 51-91% energy savings potential
+   - Parallel vs single configurations
+   - Payback period calculations
+
+3. **comprehensive_calculator.py** - Integrates all corrections
+   - Altitude/temperature corrections
+   - Application-specific factors
+   - Multiple tank configurations
+   - Energy optimization
+
+4. **improved_chat_flow.py** - Better UX conversation flow
+   - Progressive disclosure
+   - Smart defaults
+   - Multiple input methods
+
 ## 📈 Changelog
+
+### v1.4.2 (Sept 28, 2025)
+- **CRITICAL FIX**: Updated `/api/chat.py` (Vercel's actual endpoint)
+- Fixed chat flow in production environment
+- Proper state progression: Operation → Installation → Altitude → Application → Dimensions
+
+### v1.4.1 (Sept 28, 2025)
+- Fixed frontend initial greeting
+- Hardcoded correct flow in frontend as fallback
+- Version tracking improvements
 
 ### v1.4.0 (Sept 28, 2025)
 - **Major Update: Complete Chat Flow Redesign**
