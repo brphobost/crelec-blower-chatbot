@@ -140,14 +140,16 @@ async def chat(message: ChatMessage):
 
     # State machine for conversation flow
     if current_state == 'welcome':
+        # Send welcome message - this should trigger automatically when chat starts
+        # The frontend should handle this initial state
+        chat_state.update_session(message.session_id, 'operation_type', {})
         response['message'] = (
-            "Hi! I'll help you select the right blower for your needs.\n\n"
+            "Welcome! Let's select the right blower for your needs.\n\n"
             "First, what type of operation do you need?\n\n"
             "1️⃣ **Compression** (Blowing air into tanks, aeration)\n"
             "2️⃣ **Vacuum** (Suction, extraction, conveying)\n\n"
             "Please type 1 for Compression or 2 for Vacuum:"
         )
-        chat_state.update_session(message.session_id, 'operation_type', {})
 
     elif current_state == 'operation_type':
         # Parse operation type selection
