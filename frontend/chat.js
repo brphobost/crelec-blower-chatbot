@@ -46,8 +46,14 @@ class BlowerChat {
             });
         });
 
-        // Get initial greeting from backend
-        this.sendInitialMessage();
+        // Show initial greeting directly (backend integration having issues on Vercel)
+        this.addMessage('bot',
+            "Welcome! Let's select the right blower for your needs.\n\n" +
+            "First, what type of operation do you need?\n\n" +
+            "1️⃣ **Compression** (Blowing air into tanks, aeration)\n" +
+            "2️⃣ **Vacuum** (Suction, extraction, conveying)\n\n" +
+            "Please type 1 for Compression or 2 for Vacuum:"
+        );
 
         // Focus input
         this.inputField.focus();
@@ -74,8 +80,8 @@ class BlowerChat {
                 this.addMessage('bot', data.message);
             }
         } catch (error) {
-            console.error('Error getting initial message:', error);
-            // Fallback message if backend is unavailable
+            console.error('Error getting initial message from backend, using fallback:', error);
+            // Fallback message if backend is unavailable - this is what users see
             this.addMessage('bot',
                 "Welcome! Let's select the right blower for your needs.\n\n" +
                 "First, what type of operation do you need?\n\n" +
