@@ -323,16 +323,19 @@ class handler(BaseHTTPRequestHandler):
                 )
 
         elif session['state'] == 'complete':
-            if 'new' in message.lower():
+            if 'new' in message.lower() or 'start' in message.lower():
                 # Reset session for new calculation
                 sessions[session_id] = {
-                    'state': 'welcome',
+                    'state': 'operation_type',
                     'data': {},
                     'calculation': {}
                 }
                 response['message'] = (
-                    "Starting a new calculation. "
-                    "Please enter your tank dimensions in meters (length width height):"
+                    "Welcome! Let's select the right blower for your needs.\\n\\n"
+                    "First, what type of operation do you need?\\n\\n"
+                    "1️⃣ **Compression** (Blowing air into tanks, aeration)\\n"
+                    "2️⃣ **Vacuum** (Suction, extraction, conveying)\\n\\n"
+                    "Please type 1 for Compression or 2 for Vacuum:"
                 )
             else:
                 response['message'] = (

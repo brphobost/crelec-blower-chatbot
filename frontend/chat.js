@@ -270,10 +270,8 @@ class BlowerChat {
                 this.sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
                 localStorage.setItem('blower_chat_session', this.sessionId);
                 this.messagesContainer.innerHTML = '';
-                this.addMessage('bot',
-                    "Starting a new calculation. " +
-                    "Please enter your tank dimensions in meters (length width height):"
-                );
+                // Send message to backend to reset state and get initial greeting
+                this.sendInitialMessage();
                 break;
 
             case 'help':
