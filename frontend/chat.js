@@ -46,17 +46,44 @@ class BlowerChat {
             });
         });
 
-        // Send initial greeting
-        this.addMessage('bot',
-            "Hi! I'll help you select the right blower for your needs.\n\n" +
-            "First, what type of operation do you need?\n\n" +
-            "1️⃣ **Compression** (Blowing air into tanks, aeration)\n" +
-            "2️⃣ **Vacuum** (Suction, extraction, conveying)\n\n" +
-            "Please type 1 for Compression or 2 for Vacuum:"
-        );
+        // Get initial greeting from backend
+        this.sendInitialMessage();
 
         // Focus input
         this.inputField.focus();
+    }
+
+    async sendInitialMessage() {
+        // Send an empty message to get the initial greeting from backend
+        try {
+            const response = await fetch(`${this.apiUrl}/api/chat`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    session_id: this.sessionId,
+                    message: 'start',
+                    context: {}
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.message) {
+                this.addMessage('bot', data.message);
+            }
+        } catch (error) {
+            console.error('Error getting initial message:', error);
+            // Fallback message if backend is unavailable
+            this.addMessage('bot',
+                "Welcome! Let's select the right blower for your needs.\n\n" +
+                "First, what type of operation do you need?\n\n" +
+                "1️⃣ **Compression** (Blowing air into tanks, aeration)\n" +
+                "2️⃣ **Vacuum** (Suction, extraction, conveying)\n\n" +
+                "Please type 1 for Compression or 2 for Vacuum:"
+            );
+        }
     }
 
     getSessionId() {
