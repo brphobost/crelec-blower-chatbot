@@ -141,11 +141,41 @@ async def chat(message: ChatMessage):
     # State machine for conversation flow
     if current_state == 'welcome':
         response['message'] = (
-            "Hi! I'll help you select the right blower for your needs. "
-            "Let's start with your tank dimensions. "
-            "Please enter the length, width, and height in meters (e.g., '6 3 2'):"
+            "Hi! I'll help you select the right blower for your needs.\n\n"
+            "First, what type of operation do you need?\n\n"
+            "1️⃣ **Compression** (Blowing air into tanks, aeration)\n"
+            "2️⃣ **Vacuum** (Suction, extraction, conveying)\n\n"
+            "Please type 1 for Compression or 2 for Vacuum:"
         )
-        chat_state.update_session(message.session_id, 'dimensions', {})
+        chat_state.update_session(message.session_id, 'operation_type', {})
+
+    elif current_state == 'operation_type':
+        # Parse operation type selection
+        user_msg_lower = message.message.lower().strip()
+
+        if '1' in user_msg or 'compression' in user_msg_lower or 'blowing' in user_msg_lower or 'aeration' in user_msg_lower:
+            operation = 'compression'
+            operation_display = 'Compression/Blowing'
+        elif '2' in user_msg or 'vacuum' in user_msg_lower or 'suction' in user_msg_lower:
+            operation = 'vacuum'
+            operation_display = 'Vacuum/Suction'
+        else:
+            response['message'] = (
+                "Please select the operation type:\n"
+                "1 - Compression (for aeration, blowing)\n"
+                "2 - Vacuum (for suction, extraction)"
+            )
+            return response
+
+        session['data']['operation_type'] = operation
+        chat_state.update_session(message.session_id, 'dimensions', {'operation_type': operation})
+
+        response['message'] = (
+            f"✅ {operation_display} selected.\n\n"
+            "Now, let's size your system. "
+            "Please enter your tank dimensions in meters (length width height):\n"
+            "For example: '6 3 2'"
+        )
 
     elif current_state == 'dimensions':
         # Parse dimensions
