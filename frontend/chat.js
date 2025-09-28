@@ -48,9 +48,11 @@ class BlowerChat {
 
         // Send initial greeting
         this.addMessage('bot',
-            "Hi! I'll help you select the right blower for your needs. " +
-            "Let's start with your tank dimensions. " +
-            "Please enter the length, width, and height in meters (e.g., '6 3 2'):"
+            "Hi! I'll help you select the right blower for your needs.\n\n" +
+            "First, what type of operation do you need?\n\n" +
+            "1️⃣ **Compression** (Blowing air into tanks, aeration)\n" +
+            "2️⃣ **Vacuum** (Suction, extraction, conveying)\n\n" +
+            "Please type 1 for Compression or 2 for Vacuum:"
         );
 
         // Focus input
