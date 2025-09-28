@@ -200,77 +200,72 @@ class handler(BaseHTTPRequestHandler):
                     session['data']['length'] = length
                     session['data']['width'] = width
                     session['data']['height'] = height
-                    session['state'] = 'calculating'
 
-                    # Trigger calculation
+                    # Calculate requirements
                     tank_volume = length * width * height
+
+                    # Set air changes based on application
+                    app_type = session['data'].get('application', 'industrial')
+                    if app_type == 'waste_water':
+                        air_changes = 6
+                        app_display = "Waste Water Treatment"
+                    elif app_type == 'fish_hatchery':
+                        air_changes = 10
+                        app_display = "Fish Farming/Aquaculture"
+                    else:
+                        air_changes = 4
+                        app_display = "Industrial Process"
+
+                    airflow_required = round(tank_volume * air_changes * 1.2, 1)  # 1.2 safety factor
+
+                    # Pressure calculation
+                    water_pressure = height * 98.1
+                    system_losses = 150
+                    altitude = session['data'].get('altitude', 500)
+                    altitude_correction = (altitude / 100) * 12
+                    pressure_required = round(water_pressure + system_losses + altitude_correction, 1)
+
+                    # Power estimate
+                    power_estimate = round((airflow_required / 3600) * pressure_required / 600, 2)
+
+                    # Store calculation results
+                    session['calculation'] = {
+                        'airflow_required': airflow_required,
+                        'pressure_required': pressure_required,
+                        'power_estimate': power_estimate,
+                        'tank_volume': round(tank_volume, 1),
+                        'application_type': app_display
+                    }
+
+                    # Get matched products
+                    matched_products = match_products(airflow_required, pressure_required)
+                    session['matched_products'] = matched_products
+
+                    # Set state to email collection
+                    session['state'] = 'email'
+
                     response['message'] = (
                         f"✅ Tank dimensions: {length}m × {width}m × {height}m = {tank_volume:.0f}m³\\n\\n"
-                        "Calculating your blower requirements...\\n"
+                        f"**Calculation Complete!**\\n\\n"
+                        f"Based on your requirements:\\n"
+                        f"• Tank Volume: {round(tank_volume, 1)} m³\\n"
+                        f"• Required Airflow: {airflow_required} m³/hr\\n"
+                        f"• Required Pressure: {pressure_required} mbar\\n"
+                        f"• Estimated Power: {power_estimate} kW\\n\\n"
+                        f"I've found {len(matched_products)} perfect blowers for your needs!\\n\\n"
+                        f"To receive your detailed quote with:\\n"
+                        f"• Technical specifications\\n"
+                        f"• Pricing and availability\\n"
+                        f"• Delivery times\\n"
+                        f"• Valid for 30 days\\n\\n"
+                        f"Please enter your email address:"
                     )
-                    # Continue to calculation...
-                    session['state'] = 'complete'
                 else:
                     response['message'] = "Please enter three numbers for length, width, and height (e.g., '6 3 2'):"
             except ValueError:
                 response['message'] = "Please enter three valid numbers in meters (e.g., '6 3 2'):"
 
-        elif session['state'] == 'complete':
-            # Calculation complete state
-            # Calculate requirements using collected data
-            data = session['data']
-            tank_volume = data['length'] * data['width'] * data['height']
-
-            # Set air changes based on application
-            if data.get('application') == 'waste_water':
-                air_changes = 6
-            elif data.get('application') == 'fish_hatchery':
-                air_changes = 10
-            else:
-                air_changes = 4
-
-            airflow_required = round(tank_volume * air_changes * 1.2, 1)  # 1.2 safety factor
-
-            # Pressure calculation
-            water_pressure = data['height'] * 98.1
-            system_losses = 150
-            altitude_correction = (data['altitude'] / 100) * 12
-            pressure_required = round(water_pressure + system_losses + altitude_correction, 1)
-
-            # Power estimate
-            power_estimate = round((airflow_required / 3600) * pressure_required / 600, 2)
-
-            # Store calculation results
-            session['calculation'] = {
-                'airflow_required': airflow_required,
-                'pressure_required': pressure_required,
-                'power_estimate': power_estimate,
-                'tank_volume': round(tank_volume, 1),
-                'application_type': app_type
-            }
-
-            # Get matched products
-            matched_products = match_products(airflow_required, pressure_required)
-            session['matched_products'] = matched_products
-
-            # Ask for email
-            session['state'] = 'email'
-
-            response['message'] = (
-                f"✅ **Calculation Complete!**\\n\\n"
-                f"Based on your requirements:\\n"
-                f"• Tank Volume: {round(tank_volume, 1)} m³\\n"
-                f"• Required Airflow: {airflow_required} m³/hr\\n"
-                f"• Required Pressure: {pressure_required} mbar\\n"
-                f"• Estimated Power: {power_estimate} kW\\n\\n"
-                f"I've found {len(matched_products)} perfect blowers for your needs!\\n\\n"
-                f"To receive your detailed quote with:\\n"
-                f"• Technical specifications\\n"
-                f"• Pricing and availability\\n"
-                f"• Delivery times\\n"
-                f"• Valid for 30 days\\n\\n"
-                f"Please enter your email address:"
-            )
+        # Note: 'complete' state removed - calculation now happens in dimensions state
 
         elif session['state'] == 'email':
             # Validate email
