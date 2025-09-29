@@ -150,6 +150,27 @@ def match_products(airflow_required, pressure_required):
 
     # Sort by score and return top 3
     matches.sort(key=lambda x: x['score'], reverse=True)
+
+    # If no matches found, return closest alternatives
+    if len(matches) == 0 and len(PRODUCTS) > 0:
+        # Find products with sufficient pressure at least
+        for product in PRODUCTS:
+            if product.get('pressure', 0) >= pressure_required * 0.5:  # At least 50% of pressure
+                matches.append({
+                    'product': product,
+                    'score': 10,
+                    'match_type': 'Alternative Option'
+                })
+
+        # If still no matches, just show any products
+        if len(matches) == 0:
+            for product in PRODUCTS[:3]:
+                matches.append({
+                    'product': product,
+                    'score': 1,
+                    'match_type': 'Available Product'
+                })
+
     return matches[:3]
 
 def validate_email(email):
