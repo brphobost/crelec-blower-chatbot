@@ -1,0 +1,180 @@
+{
+  "products": [
+    {
+      "model": "GHBH D25 12 1R0",
+      "airflow": 18,
+      "pressure": 70,
+      "power": 0.2,
+      "in_stock": true,
+      "airflow_m3_min": 0.3
+    },
+    {
+      "model": "GHBH D35 12 1R2",
+      "airflow": 30,
+      "pressure": 80,
+      "power": 0.3,
+      "in_stock": true,
+      "airflow_m3_min": 0.5
+    },
+    {
+      "model": "GHBH D45 12 1R5",
+      "airflow": 48,
+      "pressure": 90,
+      "power": 0.4,
+      "in_stock": true,
+      "airflow_m3_min": 0.8
+    },
+    {
+      "model": "GHBH 2D3 10",
+      "airflow": 72,
+      "pressure": 100,
+      "power": 0.55,
+      "in_stock": true,
+      "airflow_m3_min": 1.2
+    },
+    {
+      "model": "GHBH 2D3 11",
+      "airflow": 90,
+      "pressure": 110,
+      "power": 0.75,
+      "in_stock": false,
+      "airflow_m3_min": 1.5
+    },
+    {
+      "model": "GHBH 2D3 12",
+      "airflow": 120,
+      "pressure": 120,
+      "power": 1.1,
+      "in_stock": true,
+      "airflow_m3_min": 2.0
+    },
+    {
+      "model": "GHBH 2D4 10",
+      "airflow": 150,
+      "pressure": 130,
+      "power": 1.5,
+      "in_stock": true,
+      "airflow_m3_min": 2.5
+    },
+    {
+      "model": "GHBH 2D4 11",
+      "airflow": 180,
+      "pressure": 140,
+      "power": 2.2,
+      "in_stock": true,
+      "airflow_m3_min": 3.0
+    },
+    {
+      "model": "GHBH 2D5 20",
+      "airflow": 240,
+      "pressure": 150,
+      "power": 3.0,
+      "in_stock": false,
+      "airflow_m3_min": 4.0
+    },
+    {
+      "model": "GHBH 2D5 21",
+      "airflow": 300,
+      "pressure": 160,
+      "power": 4.0,
+      "in_stock": true,
+      "airflow_m3_min": 5.0
+    },
+    {
+      "model": "GHBH 2D6 30",
+      "airflow": 360,
+      "pressure": 180,
+      "power": 5.5,
+      "in_stock": true,
+      "airflow_m3_min": 6.0
+    },
+    {
+      "model": "GHBH 2D6 31",
+      "airflow": 450,
+      "pressure": 200,
+      "power": 7.5,
+      "in_stock": true,
+      "airflow_m3_min": 7.5
+    },
+    {
+      "model": "GHBH 2D7 40",
+      "airflow": 540,
+      "pressure": 220,
+      "power": 9.0,
+      "in_stock": false,
+      "airflow_m3_min": 9.0
+    },
+    {
+      "model": "GHBH 2D7 41",
+      "airflow": 630,
+      "pressure": 240,
+      "power": 11.0,
+      "in_stock": true,
+      "airflow_m3_min": 10.5
+    },
+    {
+      "model": "GHBH 2RB 310",
+      "airflow": 300,
+      "pressure": 200,
+      "power": 3.0,
+      "in_stock": true,
+      "airflow_m3_min": 5.0
+    },
+    {
+      "model": "GHBH 2RB 410",
+      "airflow": 498,
+      "pressure": 250,
+      "power": 4.0,
+      "in_stock": true,
+      "airflow_m3_min": 8.3
+    },
+    {
+      "model": "GHBH 2RB 510",
+      "airflow": 648,
+      "pressure": 300,
+      "power": 5.5,
+      "in_stock": false,
+      "airflow_m3_min": 10.8
+    },
+    {
+      "model": "GHBH 2RB 610",
+      "airflow": 798,
+      "pressure": 350,
+      "power": 7.5,
+      "in_stock": true,
+      "airflow_m3_min": 13.3
+    },
+    {
+      "model": "GHBH 2RB 710",
+      "airflow": 1002,
+      "pressure": 400,
+      "power": 11.0,
+      "in_stock": true,
+      "airflow_m3_min": 16.7
+    },
+    {
+      "model": "GHBH 2RB 810",
+      "airflow": 1200,
+      "pressure": 450,
+      "power": 15.0,
+      "in_stock": false,
+      "airflow_m3_min": 20.0
+    },
+    {
+      "model": "GHBH 2RB 910",
+      "airflow": 1398,
+      "pressure": 500,
+      "power": 18.5,
+      "in_stock": true,
+      "airflow_m3_min": 23.3
+    },
+    {
+      "model": "GHBH 2RB 943",
+      "airflow": 1602,
+      "pressure": 550,
+      "power": 22.0,
+      "in_stock": false,
+      "airflow_m3_min": 26.7
+    }
+  ]
+}

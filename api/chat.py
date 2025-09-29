@@ -7,68 +7,83 @@ import re
 # In-memory storage for sessions
 sessions = {}
 
-# Load products from JSON (or Google Sheets in future)
+# Load products from simplified JSON (or Google Sheets in future)
 def load_products():
-    """Load products from JSON file or Google Sheets"""
+    """Load products from simplified JSON file or Google Sheets"""
     try:
-        # For now, use local JSON. Can switch to Sheets API later:
-        # response = urllib.request.urlopen('https://your-domain/api/sheets_products')
-        # data = json.loads(response.read())
-        # return data['products']
-
-        with open('frontend/products.json', 'r') as f:
+        # Try to load simplified format first
+        with open('frontend/products_simplified.json', 'r') as f:
             products_data = json.load(f)
             return products_data['products']
-    except Exception as e:
-        print(f"Error loading products: {e}")
-        return []  # Return empty list if loading fails
+    except:
+        try:
+            # Fallback to original format and convert
+            with open('frontend/products.json', 'r') as f:
+                products_data = json.load(f)
+                # Convert old format to simplified format
+                simplified = []
+                for p in products_data['products']:
+                    simplified.append({
+                        'model': p.get('model', ''),
+                        'airflow': (p.get('airflow_min', 0) + p.get('airflow_max', 0)) / 2,
+                        'pressure': (p.get('pressure_min', 0) + p.get('pressure_max', 0)) / 2,
+                        'power': p.get('power', 0),
+                        'in_stock': p.get('stock_status') == 'in_stock'
+                    })
+                return simplified
+        except Exception as e:
+            print(f"Error loading products: {e}")
+            return []  # Return empty list if loading fails
 
 PRODUCTS = load_products()
 
 def match_products(airflow_required, pressure_required):
-    """Smart product matching with scoring system"""
+    """Smart product matching with simplified catalog format"""
     matches = []
 
     for product in PRODUCTS:
+        # Skip if product doesn't have required fields
+        if not all(k in product for k in ['airflow', 'pressure', 'power']):
+            continue
+
         score = 0
         match_type = ""
 
-        # Perfect match (100 points)
-        if (product['airflow_min'] <= airflow_required <= product['airflow_max'] and
-            product['pressure_min'] <= pressure_required <= product['pressure_max']):
-            score = 100
-            match_type = "Perfect Match"
+        # Get product specs (airflow already in m³/hr)
+        product_airflow = product.get('airflow', 0)
+        product_pressure = product.get('pressure', 0)
 
-        # Over-specified but within 20% (80 points)
-        elif (airflow_required >= product['airflow_min'] * 0.8 and
-              pressure_required >= product['pressure_min'] * 0.8 and
-              airflow_required <= product['airflow_max'] and
-              pressure_required <= product['pressure_max']):
-            score = 80
-            match_type = "Recommended"
+        # Check if product meets minimum requirements
+        if product_airflow >= airflow_required and product_pressure >= pressure_required:
+            # Calculate how much oversized the product is
+            airflow_excess = (product_airflow - airflow_required) / airflow_required if airflow_required > 0 else 0
+            pressure_excess = (product_pressure - pressure_required) / pressure_required if pressure_required > 0 else 0
 
-        # Slightly over capacity (70 points)
-        elif (product['airflow_max'] >= airflow_required and
-              product['pressure_max'] >= pressure_required and
-              product['airflow_min'] <= airflow_required * 1.3):
-            score = 70
-            match_type = "Higher Capacity Option"
+            # Perfect match (within 20% oversized)
+            if airflow_excess <= 0.2 and pressure_excess <= 0.2:
+                score = 100
+                match_type = "Perfect Match"
+            # Good match (within 50% oversized)
+            elif airflow_excess <= 0.5 and pressure_excess <= 0.5:
+                score = 80
+                match_type = "Recommended"
+            # Acceptable match (meets requirements but oversized)
+            else:
+                score = 60 - (airflow_excess * 10) - (pressure_excess * 10)
+                match_type = "Higher Capacity Option"
 
-        # For very small requirements, recommend smallest suitable blower (60 points)
-        elif (airflow_required < product['airflow_min'] and
-              pressure_required <= product['pressure_max']):
-            # Give preference to smallest oversized unit
-            score = 60 - (product['airflow_min'] - airflow_required) / 10
-            match_type = "Minimum Size Available"
+        # For very small requirements, recommend smallest suitable blower
+        elif product_pressure >= pressure_required:
+            # Product meets pressure but not airflow - still consider it
+            score = 40 - (airflow_required - product_airflow) / 10
+            match_type = "Minimum Available"
 
         # Stock status bonus
         if score > 0:
-            if product['stock_status'] == 'in_stock':
+            if product.get('in_stock', False):
                 score += 10
-            elif product['stock_status'] == 'low_stock':
-                score += 5
-            elif product['stock_status'] == 'on_order':
-                score -= 10
+            else:
+                score -= 5
 
             matches.append({
                 'product': product,
@@ -294,13 +309,13 @@ class handler(BaseHTTPRequestHandler):
                 products_summary = []
                 for i, match in enumerate(session.get('matched_products', [])[:3], 1):
                     product = match['product']
-                    stock_emoji = "✅" if product['stock_status'] == 'in_stock' else "⏱️"
-                    delivery = "Immediate delivery" if product['delivery_days'] == 0 else f"{product['delivery_days']} days delivery"
+                    stock_emoji = "✅" if product.get('in_stock', False) else "⏱️"
+                    stock_text = "In Stock" if product.get('in_stock', False) else "On Order"
 
                     products_summary.append(
                         f"{i}. **{product['model']}** - {match['match_type']}\\n"
-                        f"   Power: {product['power']} kW | R {product['price']:,}\\n"
-                        f"   {stock_emoji} {delivery}"
+                        f"   Airflow: {product.get('airflow', 0):.0f} m³/hr | Pressure: {product.get('pressure', 0):.0f} mbar\\n"
+                        f"   Power: {product.get('power', 0)} kW | {stock_emoji} {stock_text}"
                     )
 
                 response['message'] = (
