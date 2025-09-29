@@ -282,27 +282,41 @@ class handler(BaseHTTPRequestHandler):
 
                     # Calculate requirements
                     tank_volume = length * width * height
+                    tank_area = length * width  # m²
 
-                    # Set air changes based on application
+                    # Calculate airflow based on application (using formulas from reference)
                     app_type = session['data'].get('application', 'industrial')
                     if app_type == 'waste_water':
-                        air_changes = 6
+                        # Waste water: Q = tank area × 0.25 m³/min
+                        airflow_m3_min = tank_area * 0.25
                         app_display = "Waste Water Treatment"
                     elif app_type == 'fish_hatchery':
-                        air_changes = 10
+                        # Fish hatchery: Q = pond area × (0.0015 to 0.0025) m³/min
+                        # Using middle value 0.002
+                        airflow_m3_min = tank_area * 0.002
                         app_display = "Fish Farming/Aquaculture"
                     else:
-                        air_changes = 4
+                        # Industrial: Using conservative estimate
+                        airflow_m3_min = tank_area * 0.1
                         app_display = "Industrial Process"
 
-                    airflow_required = round(tank_volume * air_changes * 1.2, 1)  # 1.2 safety factor
+                    # Convert to m³/hr
+                    airflow_required = round(airflow_m3_min * 60, 1)
 
-                    # Pressure calculation
-                    water_pressure = height * 98.1
-                    system_losses = 150
+                    # Pressure calculation based on formulas
+                    # P = tank depth H(cm) × solution specific gravity r × (1.2~1.5)
+                    # Converting: H(cm) × 1 × 1.3 = H(m) × 100 × 1.3 = H(m) × 130 mbar
+
+                    depth_pressure = height * 100 * 1.3  # depth in cm × gravity × safety factor
+
+                    # Add system losses (pipes, diffusers)
+                    system_losses = 50  # Reduced from 150 as depth pressure includes safety
+
+                    # Altitude correction
                     altitude = session['data'].get('altitude', 500)
                     altitude_correction = (altitude / 100) * 12
-                    pressure_required = round(water_pressure + system_losses + altitude_correction, 1)
+
+                    pressure_required = round(depth_pressure + system_losses + altitude_correction, 1)
 
                     # Power estimate
                     power_estimate = round((airflow_required / 3600) * pressure_required / 600, 2)
