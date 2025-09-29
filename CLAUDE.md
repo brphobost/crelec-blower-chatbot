@@ -461,7 +461,95 @@ Streamlined for faster quotes:
    - Smart defaults
    - Multiple input methods
 
+## 🎯 Key Technical Updates (September 29, 2025)
+
+### Critical Improvements Made Today
+
+#### 1. **Correct Formula Implementation (v1.6.1)**
+- Fixed calculations to match industry-standard formulas
+- **Waste Water Treatment**: Airflow = Tank Area (m²) × 0.25 m³/min
+- **Fish Hatchery**: Airflow = Pond Area (m²) × 0.002 m³/min (middle of 0.0015-0.0025 range)
+- **Pressure**: Depth (m) × 100 × 1.3 (includes safety factor) + system losses
+- Previous incorrect formula was using volume × air changes
+
+#### 2. **Unit Consistency (v1.6.2)**
+- All airflow calculations now in **m³/min** to match Google Sheets
+- Display shows both units: "1.5 m³/min (90 m³/hr)" for clarity
+- Product matching compares like-for-like units
+- Fixed conversion errors that prevented matching
+
+#### 3. **Google Sheets Integration (v1.6.0)**
+- **Live catalog**: https://docs.google.com/spreadsheets/d/14x7T9cHol94jk3w4CgZggKIYrYSMpefRrflYfC0HUk4/
+- Reads 186 products directly from customer's Google Sheet
+- Real-time updates without code deployment
+- Columns: Blower Model | Airflow [m3/min] | Pressure [mBar] | Power [kW] | In Stock
+
+#### 4. **UX Improvements**
+- **Word-based inputs** (v1.5.0): Type "compression" not "1" for clarity
+- **Removed installation question** (v1.5.1): Not used in calculations
+- **Streamlined flow**: 5 steps instead of 6
+- Intelligent partial matching: "comp" → compression, "consult" → consultant
+
+#### 5. **PDF Generation Fix (v1.6.5)**
+- Fixed data format mismatches
+- Handles both m³/min and m³/hr display
+- Works with simplified Google Sheets product structure
+- Shows proper stock status from boolean values
+
+### Current Calculation Logic
+
+```python
+# Waste Water Treatment
+airflow_m3_min = tank_area * 0.25
+
+# Fish Hatchery
+airflow_m3_min = tank_area * 0.002
+
+# Pressure
+pressure = depth * 100 * 1.3 + 50 + altitude_correction
+```
+
+### Example Calculation (2×3×2m tank)
+- Tank Area: 6 m²
+- **Waste Water**: 6 × 0.25 = 1.5 m³/min (90 m³/hr) at 310 mbar
+- **Fish Farm**: 6 × 0.002 = 0.012 m³/min (0.72 m³/hr) at 310 mbar
+
 ## 📈 Changelog
+
+### v1.6.5 (Sept 29, 2025)
+- Fixed PDF generation to handle new data formats
+- Proper unit display in quotes
+
+### v1.6.4 (Sept 29, 2025)
+- Removed alternative matching fallback
+- Using real 186-product catalog from Google Sheets
+
+### v1.6.3 (Sept 29, 2025)
+- Added fallback product display (later removed)
+
+### v1.6.2 (Sept 29, 2025)
+- **CRITICAL**: Fixed airflow units to m³/min throughout
+- Proper unit conversion and display
+
+### v1.6.1 (Sept 29, 2025)
+- **CRITICAL**: Implemented correct calculation formulas
+- Fixed waste water and fish farm calculations
+
+### v1.6.0 (Sept 29, 2025)
+- **MAJOR**: Google Sheets integration live
+- Connected to customer's product catalog
+
+### v1.5.3 (Sept 29, 2025)
+- Simplified product catalog format
+- Matched customer's Excel structure
+
+### v1.5.1 (Sept 29, 2025)
+- Removed installation type question
+- Streamlined to 5-step flow
+
+### v1.5.0 (Sept 29, 2025)
+- Changed to word-based inputs for clarity
+- Better UX with natural language
 
 ### v1.4.2 (Sept 28, 2025)
 - **CRITICAL FIX**: Updated `/api/chat.py` (Vercel's actual endpoint)
