@@ -7,10 +7,23 @@ import re
 # In-memory storage for sessions
 sessions = {}
 
-# Load products from JSON
-with open('frontend/products.json', 'r') as f:
-    products_data = json.load(f)
-    PRODUCTS = products_data['products']
+# Load products from JSON (or Google Sheets in future)
+def load_products():
+    """Load products from JSON file or Google Sheets"""
+    try:
+        # For now, use local JSON. Can switch to Sheets API later:
+        # response = urllib.request.urlopen('https://your-domain/api/sheets_products')
+        # data = json.loads(response.read())
+        # return data['products']
+
+        with open('frontend/products.json', 'r') as f:
+            products_data = json.load(f)
+            return products_data['products']
+    except Exception as e:
+        print(f"Error loading products: {e}")
+        return []  # Return empty list if loading fails
+
+PRODUCTS = load_products()
 
 def match_products(airflow_required, pressure_required):
     """Smart product matching with scoring system"""
