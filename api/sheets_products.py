@@ -14,10 +14,10 @@ class handler(BaseHTTPRequestHandler):
         """Fetch products from Google Sheets"""
         try:
             # Google Sheets configuration
-            # Sheet must be publicly readable or use API key
-            SHEET_ID = "YOUR_GOOGLE_SHEET_ID"  # e.g., "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms"
-            SHEET_NAME = "Products"  # Name of the sheet tab
-            API_KEY = "YOUR_GOOGLE_API_KEY"  # Optional: for private sheets
+            # Customer's live Google Sheet
+            SHEET_ID = "14x7T9cHol94jk3w4CgZggKIYrYSMpefRrflYfC0HUk4"
+            SHEET_NAME = "Sheet1"  # Default tab name
+            API_KEY = ""  # Not needed for public sheets
 
             # Build Google Sheets API URL
             # Using CSV export for simplicity (no API key needed if sheet is public)
@@ -44,28 +44,18 @@ class handler(BaseHTTPRequestHandler):
             for row in rows[1:]:  # Assuming first row is headers
                 try:
                     cells = row['c']
+                    # Match simplified format: Model, Airflow, Pressure, Power, In Stock
                     product = {
-                        'id': cells[0]['v'] if cells[0] else '',
-                        'model': cells[1]['v'] if cells[1] else '',
-                        'brand': cells[2]['v'] if cells[2] else '',
-                        'airflow_min': float(cells[3]['v']) if cells[3] else 0,
-                        'airflow_max': float(cells[4]['v']) if cells[4] else 0,
-                        'pressure_min': float(cells[5]['v']) if cells[5] else 0,
-                        'pressure_max': float(cells[6]['v']) if cells[6] else 0,
-                        'power': float(cells[7]['v']) if cells[7] else 0,
-                        'price': float(cells[8]['v']) if cells[8] else 0,
-                        'currency': cells[9]['v'] if cells[9] else 'ZAR',
-                        'stock_status': cells[10]['v'] if cells[10] else 'check',
-                        'delivery_days': int(cells[11]['v']) if cells[11] else 0,
-                        'description': cells[12]['v'] if cells[12] else '',
-                        'warranty_years': int(cells[13]['v']) if cells[13] else 1,
-                        'efficiency_rating': cells[14]['v'] if cells[14] else '',
-                        'noise_level': cells[15]['v'] if cells[15] else '',
-                        'last_updated': cells[16]['v'] if cells[16] else ''
+                        'model': cells[0]['v'] if cells[0] else '',
+                        'airflow_m3_min': float(cells[1]['v']) if cells[1] else 0,
+                        'airflow': float(cells[1]['v']) * 60 if cells[1] else 0,  # Convert to m³/hr
+                        'pressure': float(cells[2]['v']) if cells[2] else 0,
+                        'power': float(cells[3]['v']) if cells[3] else 0,
+                        'in_stock': str(cells[4]['v']).lower() == 'yes' if cells[4] else False
                     }
 
                     # Only add if essential fields are present
-                    if product['model'] and product['airflow_max'] > 0:
+                    if product['model'] and product['airflow'] > 0:
                         products.append(product)
 
                 except (IndexError, KeyError, ValueError, TypeError):

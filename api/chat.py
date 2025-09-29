@@ -7,33 +7,83 @@ import re
 # In-memory storage for sessions
 sessions = {}
 
-# Load products from simplified JSON (or Google Sheets in future)
+import urllib.request
+import urllib.parse
+
+# Load products from Google Sheets or fallback to JSON
 def load_products():
-    """Load products from simplified JSON file or Google Sheets"""
+    """Load products from Google Sheets or fallback to local JSON"""
     try:
-        # Try to load simplified format first
-        with open('frontend/products_simplified.json', 'r') as f:
-            products_data = json.load(f)
-            return products_data['products']
-    except:
+        # Try to load from Google Sheets first
+        SHEET_ID = "14x7T9cHol94jk3w4CgZggKIYrYSMpefRrflYfC0HUk4"
+        SHEET_NAME = "Sheet1"
+
+        # Build Google Sheets API URL (using visualization API for public sheets)
+        csv_url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:json&sheet={SHEET_NAME}"
+
+        # Fetch data from Google Sheets
+        with urllib.request.urlopen(csv_url) as response:
+            raw_data = response.read().decode('utf-8')
+
+        # Parse Google Visualization API response
+        # Remove the JavaScript wrapper to get JSON
+        json_str = raw_data.split('(', 1)[1].rsplit(')', 1)[0]
+        data = json.loads(json_str)
+
+        # Convert to our product format
+        products = []
+        rows = data['table']['rows']
+
+        # Skip header row, process data rows
+        for row in rows[1:]:  # Assuming first row is headers
+            try:
+                cells = row['c']
+                # Match simplified format: Model, Airflow, Pressure, Power, In Stock
+                if cells[0] and cells[0].get('v'):  # Check model exists
+                    airflow_m3_min = float(cells[1]['v']) if cells[1] and cells[1].get('v') else 0
+                    product = {
+                        'model': cells[0]['v'],
+                        'airflow_m3_min': airflow_m3_min,
+                        'airflow': airflow_m3_min * 60,  # Convert to m³/hr
+                        'pressure': float(cells[2]['v']) if cells[2] and cells[2].get('v') else 0,
+                        'power': float(cells[3]['v']) if cells[3] and cells[3].get('v') else 0,
+                        'in_stock': str(cells[4]['v']).lower() == 'yes' if cells[4] and cells[4].get('v') else False
+                    }
+
+                    # Only add if essential fields are present
+                    if product['model'] and product['airflow'] > 0:
+                        products.append(product)
+            except (IndexError, KeyError, ValueError, TypeError) as e:
+                continue  # Skip malformed rows
+
+        print(f"Loaded {len(products)} products from Google Sheets")
+        return products
+
+    except Exception as e:
+        print(f"Error loading from Google Sheets: {e}, falling back to local JSON")
+        # Fallback to local JSON
         try:
-            # Fallback to original format and convert
-            with open('frontend/products.json', 'r') as f:
+            with open('frontend/products_simplified.json', 'r') as f:
                 products_data = json.load(f)
-                # Convert old format to simplified format
-                simplified = []
-                for p in products_data['products']:
-                    simplified.append({
-                        'model': p.get('model', ''),
-                        'airflow': (p.get('airflow_min', 0) + p.get('airflow_max', 0)) / 2,
-                        'pressure': (p.get('pressure_min', 0) + p.get('pressure_max', 0)) / 2,
-                        'power': p.get('power', 0),
-                        'in_stock': p.get('stock_status') == 'in_stock'
-                    })
-                return simplified
-        except Exception as e:
-            print(f"Error loading products: {e}")
-            return []  # Return empty list if loading fails
+                return products_data['products']
+        except:
+            try:
+                with open('frontend/products.json', 'r') as f:
+                    products_data = json.load(f)
+                    # Convert old format to simplified format
+                    simplified = []
+                    for p in products_data['products']:
+                        simplified.append({
+                            'model': p.get('model', ''),
+                            'airflow': (p.get('airflow_min', 0) + p.get('airflow_max', 0)) / 2,
+                            'pressure': (p.get('pressure_min', 0) + p.get('pressure_max', 0)) / 2,
+                            'power': p.get('power', 0),
+                            'in_stock': p.get('stock_status') == 'in_stock'
+                        })
+                    return simplified
+            except Exception as e:
+                print(f"Error loading products: {e}")
+                return []  # Return empty list if loading fails
 
 PRODUCTS = load_products()
 
