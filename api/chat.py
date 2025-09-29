@@ -43,15 +43,15 @@ def load_products():
                     airflow_m3_min = float(cells[1]['v']) if cells[1] and cells[1].get('v') else 0
                     product = {
                         'model': cells[0]['v'],
-                        'airflow_m3_min': airflow_m3_min,
-                        'airflow': airflow_m3_min * 60,  # Convert to m³/hr
+                        'airflow_m3_min': airflow_m3_min,  # Keep in m³/min
+                        'airflow': airflow_m3_min * 60,  # Also store in m³/hr for compatibility
                         'pressure': float(cells[2]['v']) if cells[2] and cells[2].get('v') else 0,
                         'power': float(cells[3]['v']) if cells[3] and cells[3].get('v') else 0,
                         'in_stock': str(cells[4]['v']).lower() == 'yes' if cells[4] and cells[4].get('v') else False
                     }
 
                     # Only add if essential fields are present
-                    if product['model'] and product['airflow'] > 0:
+                    if product['model'] and airflow_m3_min > 0:
                         products.append(product)
             except (IndexError, KeyError, ValueError, TypeError) as e:
                 continue  # Skip malformed rows
@@ -88,19 +88,26 @@ def load_products():
 PRODUCTS = load_products()
 
 def match_products(airflow_required, pressure_required):
-    """Smart product matching with simplified catalog format"""
+    """Smart product matching with simplified catalog format
+
+    Args:
+        airflow_required: Required airflow in m³/min
+        pressure_required: Required pressure in mbar
+    """
     matches = []
 
     for product in PRODUCTS:
         # Skip if product doesn't have required fields
-        if not all(k in product for k in ['airflow', 'pressure', 'power']):
-            continue
+        if not all(k in product for k in ['airflow_m3_min', 'pressure', 'power']):
+            # Try alternative field names
+            if not all(k in product for k in ['airflow', 'pressure', 'power']):
+                continue
 
         score = 0
         match_type = ""
 
-        # Get product specs (airflow already in m³/hr)
-        product_airflow = product.get('airflow', 0)
+        # Get product specs in m³/min
+        product_airflow = product.get('airflow_m3_min', product.get('airflow', 0) / 60)  # Convert if needed
         product_pressure = product.get('pressure', 0)
 
         # Check if product meets minimum requirements
@@ -300,8 +307,8 @@ class handler(BaseHTTPRequestHandler):
                         airflow_m3_min = tank_area * 0.1
                         app_display = "Industrial Process"
 
-                    # Convert to m³/hr
-                    airflow_required = round(airflow_m3_min * 60, 1)
+                    # Keep in m³/min for calculations and display
+                    airflow_required = round(airflow_m3_min, 3)  # m³/min
 
                     # Pressure calculation based on formulas
                     # P = tank depth H(cm) × solution specific gravity r × (1.2~1.5)
@@ -323,7 +330,8 @@ class handler(BaseHTTPRequestHandler):
 
                     # Store calculation results
                     session['calculation'] = {
-                        'airflow_required': airflow_required,
+                        'airflow_required': airflow_required,  # m³/min
+                        'airflow_required_hr': airflow_required * 60,  # m³/hr for display
                         'pressure_required': pressure_required,
                         'power_estimate': power_estimate,
                         'tank_volume': round(tank_volume, 1),
@@ -342,7 +350,7 @@ class handler(BaseHTTPRequestHandler):
                         f"**Calculation Complete!**\\n\\n"
                         f"Based on your requirements:\\n"
                         f"• Tank Volume: {round(tank_volume, 1)} m³\\n"
-                        f"• Required Airflow: {airflow_required} m³/hr\\n"
+                        f"• Required Airflow: {airflow_required} m³/min ({airflow_required * 60:.1f} m³/hr)\\n"
                         f"• Required Pressure: {pressure_required} mbar\\n"
                         f"• Estimated Power: {power_estimate} kW\\n\\n"
                         f"I've found {len(matched_products)} perfect blowers for your needs!\\n\\n"
@@ -376,10 +384,15 @@ class handler(BaseHTTPRequestHandler):
                     stock_emoji = "✅" if product.get('in_stock', False) else "⏱️"
                     stock_text = "In Stock" if product.get('in_stock', False) else "On Order"
 
+                    # Get airflow in correct units
+                    airflow_m3_min = product.get('airflow_m3_min', product.get('airflow', 0) / 60)
+                    airflow_m3_hr = airflow_m3_min * 60
+
                     products_summary.append(
                         f"{i}. **{product['model']}** - {match['match_type']}\\n"
-                        f"   Airflow: {product.get('airflow', 0):.0f} m³/hr | Pressure: {product.get('pressure', 0):.0f} mbar\\n"
-                        f"   Power: {product.get('power', 0)} kW | {stock_emoji} {stock_text}"
+                        f"   Airflow: {airflow_m3_min:.1f} m³/min ({airflow_m3_hr:.0f} m³/hr)\\n"
+                        f"   Pressure: {product.get('pressure', 0):.0f} mbar | Power: {product.get('power', 0)} kW\\n"
+                        f"   {stock_emoji} {stock_text}"
                     )
 
                 response['message'] = (
