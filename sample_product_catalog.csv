@@ -1,0 +1,26 @@
+ID,Model,Brand,Airflow Min,Airflow Max,Pressure Min,Pressure Max,Power,Price,Currency,Stock Status,Delivery Days,Description,Warranty Years,Efficiency Rating,Noise Level,Last Updated
+GIS36-2RB,Griffin GIS 36 2RB,Griffin,500,800,300,500,5.5,45000,ZAR,in_stock,0,High efficiency side channel blower for medium applications,2,IE3,72,2024-09-28
+G20-36-2RB,Griffin G20 36 2RB,Griffin,400,700,250,450,4.0,38000,ZAR,in_stock,0,Compact and efficient blower with low vibration design,2,IE3,68,2024-09-28
+HB5515,Goorui HB5515,Goorui,600,900,350,550,7.5,52000,ZAR,on_order,14,Heavy duty industrial blower for demanding applications,2,IE2,75,2024-09-28
+HB8520,Goorui HB8520,Goorui,800,1200,400,600,11.0,68000,ZAR,in_stock,0,Premium high-capacity blower with variable speed ready,3,IE3,74,2024-09-28
+4RB310,Sirocco 4RB310,Sirocco,300,500,200,350,3.0,32000,ZAR,in_stock,0,Entry level reliable blower for small installations,1,IE2,70,2024-09-28
+4RB410,Sirocco 4RB410,Sirocco,450,650,280,420,4.5,41000,ZAR,low_stock,3,Mid-range versatile blower with proven design,2,IE2,71,2024-09-28
+4RB510,Sirocco 4RB510,Sirocco,650,850,350,500,6.0,48000,ZAR,in_stock,0,Advanced model with high efficiency motor,2,IE3,73,2024-09-28
+2BH1500,Siemens 2BH1500-7AH16,Siemens,900,1400,450,650,15.0,85000,ZAR,on_order,21,Industrial grade premium blower with German engineering,5,IE4,76,2024-09-28
+2BH1800,Siemens 2BH1800-7AH26,Siemens,1200,1800,500,700,22.0,115000,ZAR,on_order,21,Heavy industrial blower for large installations,5,IE4,78,2024-09-28
+LD055H43R,FPZ LD 055 H43 R,FPZ,350,550,300,480,5.5,48000,ZAR,in_stock,0,Italian quality blower with quiet operation,3,IE3,69,2024-09-28
+LD075H43R,FPZ LD 075 H43 R,FPZ,500,750,350,520,7.5,58000,ZAR,low_stock,5,High performance Italian blower,3,IE3,71,2024-09-28
+SCB-15,Longtech SCB-15,Longtech,250,400,180,300,2.2,28000,ZAR,in_stock,0,Budget-friendly option for small applications,1,IE2,70,2024-09-28
+SCB-20,Longtech SCB-20,Longtech,350,500,220,350,3.0,31000,ZAR,in_stock,0,Cost-effective solution with reliable performance,1,IE2,71,2024-09-28
+SCB-30,Longtech SCB-30,Longtech,450,650,280,400,4.0,36000,ZAR,in_stock,0,Good value blower for medium installations,1,IE2,72,2024-09-28
+RB-33,Republic RB-33,Republic,400,600,300,450,4.5,42000,ZAR,in_stock,0,Local manufactured with good support,2,IE2,72,2024-09-28
+RB-44,Republic RB-44,Republic,550,800,350,500,6.0,51000,ZAR,in_stock,0,Locally made heavy duty model,2,IE3,73,2024-09-28
+RB-55,Republic RB-55,Republic,700,1000,400,550,8.0,62000,ZAR,low_stock,7,Premium local blower with extended warranty,3,IE3,74,2024-09-28
+GHBH-2RB-610,Goorui GHBH 2RB 610,Goorui,800,1100,400,580,9.0,71000,ZAR,in_stock,0,High pressure model for deep tanks,2,IE3,75,2024-09-28
+GHBH-2RB-720,Goorui GHBH 2RB 720,Goorui,1000,1400,450,630,12.5,89000,ZAR,on_order,14,Extra high capacity for large installations,3,IE3,76,2024-09-28
+MSB-141,Mapro MSB-141,Mapro,150,300,150,250,1.5,22000,ZAR,in_stock,0,Ultra compact for tiny applications,1,IE2,65,2024-09-28
+MSB-241,Mapro MSB-241,Mapro,250,400,200,300,2.2,26000,ZAR,in_stock,0,Small footprint design,1,IE2,67,2024-09-28
+MSB-341,Mapro MSB-341,Mapro,350,500,250,350,3.0,32000,ZAR,in_stock,0,Versatile small blower,1,IE2,68,2024-09-28
+VFC400A,Fuji VFC400A-7W,Fuji,300,480,280,420,3.7,43000,ZAR,in_stock,0,Japanese quality with low noise operation,3,IE3,67,2024-09-28
+VFC500A,Fuji VFC500A-7W,Fuji,400,600,320,480,5.5,54000,ZAR,low_stock,5,Premium Japanese engineering,3,IE3,69,2024-09-28
+VFC600A,Fuji VFC600A-7W,Fuji,550,800,380,540,7.5,68000,ZAR,on_order,14,High-end Japanese blower,3,IE4,70,2024-09-28
