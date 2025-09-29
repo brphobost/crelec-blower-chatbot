@@ -106,46 +106,57 @@ class handler(BaseHTTPRequestHandler):
             response['message'] = (
                 "Welcome! Let's select the right blower for your needs.\\n\\n"
                 "First, what type of operation do you need?\\n\\n"
-                "1️⃣ **Compression** (Blowing air into tanks, aeration)\\n"
-                "2️⃣ **Vacuum** (Suction, extraction, conveying)\\n\\n"
-                "Please type 1 for Compression or 2 for Vacuum:"
+                "• **Compression** (Blowing air into tanks, aeration)\\n"
+                "• **Vacuum** (Suction, extraction, conveying)\\n\\n"
+                "Please type 'compression' or 'vacuum':"
             )
             session['state'] = 'operation_type'
 
         elif session['state'] == 'operation_type':
-            if '1' in message or 'compression' in message.lower():
+            msg_lower = message.lower().strip()
+            if 'comp' in msg_lower or 'blow' in msg_lower or 'aerat' in msg_lower:
                 session['data']['operation'] = 'compression'
                 response['message'] = (
                     "✅ Compression/Blowing selected.\\n\\n"
                     "Who will be handling the installation?\\n\\n"
-                    "1️⃣ **Self** (DIY installation)\\n"
-                    "2️⃣ **Consultant/Contractor** (Professional installation)\\n\\n"
-                    "Please type 1 or 2:"
+                    "• **Self** (DIY installation)\\n"
+                    "• **Consultant** (Professional installation)\\n\\n"
+                    "Please type 'self' or 'consultant':"
                 )
                 session['state'] = 'installation'
-            elif '2' in message or 'vacuum' in message.lower():
+            elif 'vac' in msg_lower or 'suc' in msg_lower or 'extract' in msg_lower:
                 session['data']['operation'] = 'vacuum'
                 response['message'] = (
                     "✅ Vacuum/Suction selected.\\n\\n"
                     "Who will be handling the installation?\\n\\n"
-                    "1️⃣ **Self** (DIY installation)\\n"
-                    "2️⃣ **Consultant/Contractor** (Professional installation)\\n\\n"
-                    "Please type 1 or 2:"
+                    "• **Self** (DIY installation)\\n"
+                    "• **Consultant** (Professional installation)\\n\\n"
+                    "Please type 'self' or 'consultant':"
                 )
                 session['state'] = 'installation'
             else:
-                response['message'] = "Please type 1 for Compression or 2 for Vacuum:"
+                response['message'] = (
+                    "I didn't understand that. Please type:\\n"
+                    "• 'compression' for blowing/aeration\\n"
+                    "• 'vacuum' for suction/extraction"
+                )
 
         elif session['state'] == 'installation':
-            if '1' in message or 'self' in message.lower():
+            msg_lower = message.lower().strip()
+            if 'self' in msg_lower or 'diy' in msg_lower or 'own' in msg_lower:
                 session['data']['installation'] = 'self'
                 install_msg = "Self-installation"
-            elif '2' in message or 'consultant' in message.lower():
+            elif 'consult' in msg_lower or 'contract' in msg_lower or 'prof' in msg_lower:
                 session['data']['installation'] = 'consultant'
                 install_msg = "Professional installation"
             else:
-                response['message'] = "Please type 1 for Self or 2 for Consultant/Contractor:"
-                return response
+                response['message'] = (
+                    "I didn't understand that. Please type:\\n"
+                    "• 'self' for DIY installation\\n"
+                    "• 'consultant' for professional installation"
+                )
+                self.wfile.write(json.dumps(response).encode())
+                return
 
             response['message'] = (
                 f"✅ {install_msg} noted.\\n\\n"
@@ -171,23 +182,33 @@ class handler(BaseHTTPRequestHandler):
             response['message'] = (
                 f"✅ Location confirmed: {altitude}m altitude\\n\\n"
                 "What's your application?\\n\\n"
-                "1️⃣ **Waste Water Treatment** (aeration tanks)\\n"
-                "2️⃣ **Fish Farming/Aquaculture**\\n"
-                "3️⃣ **Industrial Process** (general)\\n\\n"
-                "Please select 1-3:"
+                "• **Waste Water** Treatment (aeration tanks)\\n"
+                "• **Fish** Farming/Aquaculture\\n"
+                "• **Industrial** Process (general)\\n\\n"
+                "Please type 'waste water', 'fish', or 'industrial':"
             )
             session['state'] = 'application'
 
         elif session['state'] == 'application':
-            if '1' in message or 'waste' in message.lower():
+            msg_lower = message.lower().strip()
+            if 'waste' in msg_lower or 'water treat' in msg_lower or 'aerat' in msg_lower:
                 session['data']['application'] = 'waste_water'
                 app_msg = "Waste Water Treatment"
-            elif '2' in message or 'fish' in message.lower():
+            elif 'fish' in msg_lower or 'aqua' in msg_lower or 'hatch' in msg_lower:
                 session['data']['application'] = 'fish_hatchery'
                 app_msg = "Fish Farming/Aquaculture"
-            else:
+            elif 'industr' in msg_lower or 'process' in msg_lower or 'general' in msg_lower:
                 session['data']['application'] = 'industrial'
                 app_msg = "Industrial Process"
+            else:
+                response['message'] = (
+                    "I didn't understand that. Please type:\\n"
+                    "• 'waste water' for treatment plants\\n"
+                    "• 'fish' for aquaculture\\n"
+                    "• 'industrial' for general processes"
+                )
+                self.wfile.write(json.dumps(response).encode())
+                return
 
             response['message'] = (
                 f"✅ {app_msg} selected.\\n\\n"
@@ -340,9 +361,9 @@ class handler(BaseHTTPRequestHandler):
                 response['message'] = (
                     "Welcome! Let's select the right blower for your needs.\\n\\n"
                     "First, what type of operation do you need?\\n\\n"
-                    "1️⃣ **Compression** (Blowing air into tanks, aeration)\\n"
-                    "2️⃣ **Vacuum** (Suction, extraction, conveying)\\n\\n"
-                    "Please type 1 for Compression or 2 for Vacuum:"
+                    "• **Compression** (Blowing air into tanks, aeration)\\n"
+                    "• **Vacuum** (Suction, extraction, conveying)\\n\\n"
+                    "Please type 'compression' or 'vacuum':"
                 )
             else:
                 response['message'] = (
