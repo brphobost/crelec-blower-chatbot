@@ -116,50 +116,21 @@ class handler(BaseHTTPRequestHandler):
             msg_lower = message.lower().strip()
             if 'comp' in msg_lower or 'blow' in msg_lower or 'aerat' in msg_lower:
                 session['data']['operation'] = 'compression'
-                response['message'] = (
-                    "✅ Compression/Blowing selected.\\n\\n"
-                    "Who will be handling the installation?\\n\\n"
-                    "• **Self** (DIY installation)\\n"
-                    "• **Consultant** (Professional installation)\\n\\n"
-                    "Please type 'self' or 'consultant':"
-                )
-                session['state'] = 'installation'
+                op_msg = "Compression/Blowing"
             elif 'vac' in msg_lower or 'suc' in msg_lower or 'extract' in msg_lower:
                 session['data']['operation'] = 'vacuum'
-                response['message'] = (
-                    "✅ Vacuum/Suction selected.\\n\\n"
-                    "Who will be handling the installation?\\n\\n"
-                    "• **Self** (DIY installation)\\n"
-                    "• **Consultant** (Professional installation)\\n\\n"
-                    "Please type 'self' or 'consultant':"
-                )
-                session['state'] = 'installation'
+                op_msg = "Vacuum/Suction"
             else:
                 response['message'] = (
                     "I didn't understand that. Please type:\\n"
                     "• 'compression' for blowing/aeration\\n"
                     "• 'vacuum' for suction/extraction"
                 )
-
-        elif session['state'] == 'installation':
-            msg_lower = message.lower().strip()
-            if 'self' in msg_lower or 'diy' in msg_lower or 'own' in msg_lower:
-                session['data']['installation'] = 'self'
-                install_msg = "Self-installation"
-            elif 'consult' in msg_lower or 'contract' in msg_lower or 'prof' in msg_lower:
-                session['data']['installation'] = 'consultant'
-                install_msg = "Professional installation"
-            else:
-                response['message'] = (
-                    "I didn't understand that. Please type:\\n"
-                    "• 'self' for DIY installation\\n"
-                    "• 'consultant' for professional installation"
-                )
                 self.wfile.write(json.dumps(response).encode())
                 return
 
             response['message'] = (
-                f"✅ {install_msg} noted.\\n\\n"
+                f"✅ {op_msg} selected.\\n\\n"
                 "What's the altitude of your installation site?\\n"
                 "You can provide:\\n"
                 "• Altitude in meters (e.g., '1420m')\\n"
@@ -168,6 +139,8 @@ class handler(BaseHTTPRequestHandler):
                 "Location or altitude:"
             )
             session['state'] = 'altitude'
+
+        # Installation step removed - not used in calculations
 
         elif session['state'] == 'altitude':
             # Store altitude info

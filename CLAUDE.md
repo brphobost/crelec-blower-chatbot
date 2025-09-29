@@ -3,7 +3,7 @@
 ## Project Overview
 An intelligent chatbot system for Crelec S.A. that helps end-users select the right blower for their applications through a conversational interface. The system calculates requirements based on user inputs, matches products from inventory, and generates professional PDF quotes.
 
-## Current Version: v1.5.0
+## Current Version: v1.5.1
 - **Live URL**: https://blower-chatbot.vercel.app
 - **Repository**: https://github.com/brphobost/crelec-blower-chatbot
 - **Deployment**: Vercel (auto-deploys from GitHub)
@@ -428,14 +428,14 @@ Quote Generation
 - `/backend/app.py` - Local development server only
 - Always update BOTH when changing chat flow logic
 
-### Current Chat Flow (v1.4.2)
-Following exact Crelec form order:
+### Current Chat Flow (v1.5.1)
+Streamlined for faster quotes:
 1. **Operation Type** → Compression or Vacuum
-2. **Installation** → Self or Consultant
-3. **Altitude** → Location/city with smart detection
-4. **Application** → Waste Water, Fish Farm, Industrial
-5. **Operational Data** → Tank dimensions, number of tanks, piping
-6. **Results** → Calculations with recommendations
+2. **Altitude** → Location/city with smart detection
+3. **Application** → Waste Water, Fish Farm, Industrial
+4. **Operational Data** → Tank dimensions
+5. **Results** → Calculations with recommendations
+6. **Email** → Quote delivery
 
 ## 🚀 Major Technical Achievements
 
