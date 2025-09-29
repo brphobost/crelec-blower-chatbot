@@ -81,7 +81,7 @@ class QuoteGenerator {
         doc.setFont(undefined, 'normal');
         doc.text(`Email: ${quoteData.customer_data.email}`, 20, y);
         y += 7;
-        doc.text(`Application: ${this.formatApplicationType(quoteData.customer_data.application_type)}`, 20, y);
+        doc.text(`Application: ${this.formatApplicationType(quoteData.customer_data.application || 'industrial')}`, 20, y);
 
         // Requirements Analysis
         y += 15;
@@ -93,13 +93,18 @@ class QuoteGenerator {
 
         doc.setFont(undefined, 'normal');
         const calc = quoteData.calculation;
-        doc.text(`Tank Dimensions: ${quoteData.customer_data.length}m × ${quoteData.customer_data.width}m × ${quoteData.customer_data.height}m`, 20, y);
+        const length = quoteData.customer_data.length || 0;
+        const width = quoteData.customer_data.width || 0;
+        const height = quoteData.customer_data.height || 0;
+        doc.text(`Tank Dimensions: ${length}m × ${width}m × ${height}m`, 20, y);
         y += 6;
         doc.text(`Tank Volume: ${calc.tank_volume} m³`, 20, y);
         y += 6;
-        doc.text(`Altitude: ${quoteData.customer_data.altitude}m above sea level`, 20, y);
+        const altitude = quoteData.customer_data.altitude || 0;
+        doc.text(`Altitude: ${altitude}m above sea level`, 20, y);
         y += 6;
-        doc.text(`Calculated Airflow: ${calc.airflow_required} m³/hr`, 20, y);
+        const airflowHr = calc.airflow_required_hr || (calc.airflow_required * 60);
+        doc.text(`Calculated Airflow: ${calc.airflow_required} m³/min (${airflowHr.toFixed(1)} m³/hr)`, 20, y);
         y += 6;
         doc.text(`Calculated Pressure: ${calc.pressure_required} mbar`, 20, y);
         y += 6;
@@ -138,14 +143,24 @@ class QuoteGenerator {
             doc.setFont(undefined, 'normal');
             doc.setFontSize(9);
 
-            // Product specs
-            doc.text(`Airflow Range: ${product.airflow_min}-${product.airflow_max} m³/hr`, 25, y);
+            // Product specs - handle both old and new format
+            const airflowMin = product.airflow_m3_min || product.airflow_min / 60 || 0;
+            const airflowMax = product.airflow_m3_max || product.airflow_max / 60 || airflowMin;
+            const airflow = product.airflow_m3_min || product.airflow / 60 || 0;
+            const pressure = product.pressure || ((product.pressure_min || 0) + (product.pressure_max || 0)) / 2;
+            const power = product.power || 0;
+
+            doc.text(`Airflow: ${airflow.toFixed(1)} m³/min (${(airflow * 60).toFixed(0)} m³/hr)`, 25, y);
             y += 5;
-            doc.text(`Pressure Range: ${product.pressure_min}-${product.pressure_max} mbar`, 25, y);
+            doc.text(`Pressure: ${pressure.toFixed(0)} mbar`, 25, y);
             y += 5;
-            doc.text(`Power: ${product.power} kW`, 25, y);
+            doc.text(`Power: ${power} kW`, 25, y);
             y += 5;
-            doc.text(`Price: R ${product.price.toLocaleString()}`, 25, y);
+            if (product.price) {
+                doc.text(`Price: R ${product.price.toLocaleString()}`, 25, y);
+            } else {
+                doc.text(`Price: Contact for pricing`, 25, y);
+            }
 
             // Stock status
             const stockStatus = this.getStockStatus(product);
@@ -184,14 +199,16 @@ class QuoteGenerator {
     formatApplicationType(type) {
         const types = {
             'waste_water': 'Waste Water Treatment',
-            'fish_hatchery': 'Fish Hatchery',
+            'fish_hatchery': 'Fish Hatchery / Aquaculture',
+            'industrial': 'Industrial Process',
             'general': 'General Industrial'
         };
-        return types[type] || type;
+        return types[type] || 'General Application';
     }
 
     getStockStatus(product) {
-        if (product.stock_status === 'in_stock') {
+        const inStock = product.in_stock || product.stock_status === 'in_stock';
+        if (inStock) {
             return {
                 text: '✓ In Stock - Immediate Delivery',
                 color: [0, 128, 0]
