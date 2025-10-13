@@ -1,0 +1,222 @@
+"""
+Xero OAuth Callback Handler for Vercel
+Handles the OAuth 2.0 callback from Xero after user authorization
+"""
+
+import json
+import os
+from urllib.parse import parse_qs
+import requests
+from http.server import BaseHTTPRequestHandler
+
+class handler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        """
+        Handle OAuth callback from Xero
+        Receives authorization code and exchanges it for access token
+        """
+        try:
+            # Parse query parameters
+            query_string = self.path.split('?')[1] if '?' in self.path else ''
+            params = parse_qs(query_string)
+
+            # Get authorization code from callback
+            code = params.get('code', [None])[0]
+            state = params.get('state', [None])[0]
+            error = params.get('error', [None])[0]
+
+            # Check for errors
+            if error:
+                error_desc = params.get('error_description', ['Unknown error'])[0]
+                self.send_response(400)
+                self.send_header('Content-Type', 'text/html')
+                self.end_headers()
+                self.wfile.write(f"""
+                <html>
+                    <head><title>Xero Authorization Failed</title></head>
+                    <body style="font-family: Arial, sans-serif; padding: 40px; text-align: center;">
+                        <h1 style="color: #dc3545;">Authorization Failed</h1>
+                        <p>Error: {error}</p>
+                        <p>Description: {error_desc}</p>
+                        <a href="/">Return to Chatbot</a>
+                    </body>
+                </html>
+                """.encode())
+                return
+
+            if not code:
+                self.send_response(400)
+                self.send_header('Content-Type', 'text/html')
+                self.end_headers()
+                self.wfile.write(b"""
+                <html>
+                    <head><title>Missing Authorization Code</title></head>
+                    <body style="font-family: Arial, sans-serif; padding: 40px; text-align: center;">
+                        <h1 style="color: #dc3545;">Missing Authorization Code</h1>
+                        <p>No authorization code received from Xero.</p>
+                        <a href="/">Return to Chatbot</a>
+                    </body>
+                </html>
+                """)
+                return
+
+            # Exchange code for token
+            token_url = 'https://identity.xero.com/connect/token'
+
+            # Get credentials from environment variables
+            client_id = os.environ.get('XERO_CLIENT_ID', '')
+            client_secret = os.environ.get('XERO_CLIENT_SECRET', '')
+            redirect_uri = 'https://blower-chatbot.vercel.app/api/xero-callback'
+
+            # Prepare token request
+            token_data = {
+                'grant_type': 'authorization_code',
+                'code': code,
+                'redirect_uri': redirect_uri
+            }
+
+            # Make token request
+            token_response = requests.post(
+                token_url,
+                data=token_data,
+                auth=(client_id, client_secret),
+                headers={'Content-Type': 'application/x-www-form-urlencoded'}
+            )
+
+            if token_response.status_code == 200:
+                # Success - got tokens
+                tokens = token_response.json()
+                access_token = tokens.get('access_token')
+                refresh_token = tokens.get('refresh_token')
+                expires_in = tokens.get('expires_in', 1800)
+
+                # Get tenant ID
+                connections_response = requests.get(
+                    'https://api.xero.com/connections',
+                    headers={'Authorization': f'Bearer {access_token}'}
+                )
+
+                tenant_id = None
+                org_name = None
+                if connections_response.status_code == 200:
+                    connections = connections_response.json()
+                    if connections:
+                        tenant_id = connections[0].get('tenantId')
+                        org_name = connections[0].get('tenantName', 'Unknown')
+
+                # Store tokens securely (in production, use database or secure storage)
+                # For now, we'll display success message
+
+                self.send_response(200)
+                self.send_header('Content-Type', 'text/html')
+                self.end_headers()
+                self.wfile.write(f"""
+                <html>
+                    <head>
+                        <title>Xero Authorization Successful</title>
+                        <style>
+                            body {{
+                                font-family: Arial, sans-serif;
+                                padding: 40px;
+                                max-width: 600px;
+                                margin: 0 auto;
+                                background-color: #f8f9fa;
+                            }}
+                            .success-box {{
+                                background: white;
+                                border-radius: 8px;
+                                padding: 30px;
+                                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                            }}
+                            h1 {{ color: #28a745; }}
+                            .info-box {{
+                                background: #e7f3ff;
+                                border-left: 4px solid #0078d4;
+                                padding: 15px;
+                                margin: 20px 0;
+                            }}
+                            .token-info {{
+                                background: #f8f9fa;
+                                padding: 10px;
+                                border-radius: 4px;
+                                font-family: monospace;
+                                word-break: break-all;
+                                margin: 10px 0;
+                            }}
+                            button {{
+                                background: #0078d4;
+                                color: white;
+                                padding: 10px 20px;
+                                border: none;
+                                border-radius: 4px;
+                                cursor: pointer;
+                                margin-top: 20px;
+                            }}
+                        </style>
+                    </head>
+                    <body>
+                        <div class="success-box">
+                            <h1>✅ Xero Authorization Successful!</h1>
+                            <p>Successfully connected to Xero organization: <strong>{org_name or 'Unknown'}</strong></p>
+
+                            <div class="info-box">
+                                <h3>Connection Details:</h3>
+                                <p><strong>Tenant ID:</strong> {tenant_id or 'Not retrieved'}</p>
+                                <p><strong>Token expires in:</strong> {expires_in // 60} minutes</p>
+                            </div>
+
+                            <div class="info-box">
+                                <h3>Next Steps:</h3>
+                                <ol>
+                                    <li>Tokens have been generated successfully</li>
+                                    <li>Configure automatic token storage in your database</li>
+                                    <li>Set up scheduled inventory sync jobs</li>
+                                    <li>Test product fetching from Xero</li>
+                                </ol>
+                            </div>
+
+                            <p><strong>Important:</strong> In production, these tokens should be securely stored in a database, not displayed.</p>
+
+                            <button onclick="window.location.href='/'">Return to Chatbot</button>
+                        </div>
+                    </body>
+                </html>
+                """.encode())
+
+                # Log successful connection
+                print(f"Successfully connected to Xero org: {org_name}, Tenant: {tenant_id}")
+
+            else:
+                # Token exchange failed
+                error_data = token_response.json() if token_response.content else {}
+                self.send_response(400)
+                self.send_header('Content-Type', 'text/html')
+                self.end_headers()
+                self.wfile.write(f"""
+                <html>
+                    <head><title>Token Exchange Failed</title></head>
+                    <body style="font-family: Arial, sans-serif; padding: 40px; text-align: center;">
+                        <h1 style="color: #dc3545;">Token Exchange Failed</h1>
+                        <p>Could not exchange authorization code for access token.</p>
+                        <p>Status: {token_response.status_code}</p>
+                        <p>Error: {json.dumps(error_data)}</p>
+                        <a href="/">Return to Chatbot</a>
+                    </body>
+                </html>
+                """.encode())
+
+        except Exception as e:
+            # Handle any other errors
+            self.send_response(500)
+            self.send_header('Content-Type', 'text/html')
+            self.end_headers()
+            self.wfile.write(f"""
+            <html>
+                <head><title>Server Error</title></head>
+                <body style="font-family: Arial, sans-serif; padding: 40px; text-align: center;">
+                    <h1 style="color: #dc3545;">Server Error</h1>
+                    <p>An error occurred processing the callback: {str(e)}</p>
+                    <a href="/">Return to Chatbot</a>
+                </body>
+            </html>
+            """.encode())

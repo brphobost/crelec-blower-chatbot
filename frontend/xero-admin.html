@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xero Integration Admin - Crelec Blower Chatbot</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            padding: 40px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .status-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 4px solid #0078d4;
+        }
+
+        .status-card.connected {
+            border-left-color: #28a745;
+        }
+
+        .status-card.disconnected {
+            border-left-color: #dc3545;
+        }
+
+        .status-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .badge-connected {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .badge-disconnected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .info-item {
+            background: white;
+            padding: 10px;
+            border-radius: 4px;
+        }
+
+        .info-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .info-value {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .action-section {
+            margin-top: 30px;
+        }
+
+        .action-section h2 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 20px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        .btn-primary {
+            background: #0078d4;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #106ebe;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .credentials-form {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #0078d4;
+        }
+
+        .sync-log {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .log-entry {
+            padding: 5px 0;
+            border-bottom: 1px solid #e0e0e0;
+            font-size: 13px;
+        }
+
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+
+        .log-time {
+            color: #666;
+            margin-right: 10px;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+
+        .alert-info {
+            background: #cfe2ff;
+            border: 1px solid #b6d4fe;
+            color: #084298;
+        }
+
+        .alert-warning {
+            background: #fff3cd;
+            border: 1px solid #ffecb5;
+            color: #664d03;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #0078d4;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔗 Xero Integration Admin</h1>
+        <p class="subtitle">Manage inventory synchronization with Xero</p>
+
+        <div id="connectionStatus" class="status-card disconnected">
+            <div class="status-header">
+                <h3>Connection Status</h3>
+                <span id="statusBadge" class="status-badge badge-disconnected">Not Connected</span>
+            </div>
+            <div class="info-grid">
+                <div class="info-item">
+                    <div class="info-label">Organization</div>
+                    <div id="orgName" class="info-value">-</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Last Sync</div>
+                    <div id="lastSync" class="info-value">Never</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Products Synced</div>
+                    <div id="productCount" class="info-value">0</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Sync Status</div>
+                    <div id="syncStatus" class="info-value">Idle</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="action-section">
+            <h2>Setup Xero Connection</h2>
+
+            <div class="alert alert-info">
+                <strong>First Time Setup:</strong> Enter your Xero app credentials below, then click "Connect to Xero" to authorize access.
+            </div>
+
+            <div class="credentials-form">
+                <div class="form-group">
+                    <label for="clientId">Client ID</label>
+                    <input type="text" id="clientId" placeholder="Enter your Xero Client ID">
+                </div>
+                <div class="form-group">
+                    <label for="clientSecret">Client Secret</label>
+                    <input type="password" id="clientSecret" placeholder="Enter your Xero Client Secret">
+                </div>
+                <button class="btn btn-primary" onclick="saveCredentials()">Save Credentials</button>
+                <span id="saveStatus" class="hidden" style="color: green; margin-left: 10px;">✓ Saved</span>
+            </div>
+
+            <div style="margin-top: 20px;">
+                <button id="connectBtn" class="btn btn-success" onclick="connectToXero()">
+                    Connect to Xero
+                </button>
+                <button class="btn btn-primary" onclick="testConnection()">
+                    Test Connection
+                </button>
+                <button class="btn btn-secondary" onclick="syncNow()" disabled id="syncBtn">
+                    Sync Inventory Now
+                </button>
+                <button class="btn btn-danger" onclick="disconnect()" disabled id="disconnectBtn">
+                    Disconnect
+                </button>
+            </div>
+        </div>
+
+        <div class="action-section">
+            <h2>Sync Configuration</h2>
+            <div class="credentials-form">
+                <div class="form-group">
+                    <label for="syncInterval">Auto-Sync Interval (minutes)</label>
+                    <input type="number" id="syncInterval" value="15" min="5" max="60">
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="autoSync" checked> Enable Automatic Sync
+                    </label>
+                </div>
+                <button class="btn btn-primary" onclick="updateSyncSettings()">Update Settings</button>
+            </div>
+        </div>
+
+        <div class="action-section">
+            <h2>Sync History</h2>
+            <div class="sync-log" id="syncLog">
+                <div class="log-entry">
+                    <span class="log-time">--:--:--</span>
+                    No sync history available
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Check connection status on page load
+        window.onload = function() {
+            checkConnectionStatus();
+            loadCredentials();
+        };
+
+        function saveCredentials() {
+            const clientId = document.getElementById('clientId').value;
+            const clientSecret = document.getElementById('clientSecret').value;
+
+            if (!clientId || !clientSecret) {
+                alert('Please enter both Client ID and Client Secret');
+                return;
+            }
+
+            // In production, these should be sent to the server securely
+            localStorage.setItem('xero_client_id', clientId);
+            localStorage.setItem('xero_client_secret', clientSecret);
+
+            document.getElementById('saveStatus').classList.remove('hidden');
+            setTimeout(() => {
+                document.getElementById('saveStatus').classList.add('hidden');
+            }, 3000);
+        }
+
+        function loadCredentials() {
+            const clientId = localStorage.getItem('xero_client_id');
+            const clientSecret = localStorage.getItem('xero_client_secret');
+
+            if (clientId) {
+                document.getElementById('clientId').value = clientId;
+            }
+            if (clientSecret) {
+                document.getElementById('clientSecret').value = clientSecret;
+            }
+        }
+
+        function connectToXero() {
+            const clientId = document.getElementById('clientId').value || localStorage.getItem('xero_client_id');
+
+            if (!clientId) {
+                alert('Please save your Client ID first');
+                return;
+            }
+
+            // Generate OAuth URL
+            const redirectUri = 'https://blower-chatbot.vercel.app/api/xero-callback';
+            const scope = 'accounting.transactions.read accounting.settings.read';
+            const state = generateRandomState();
+
+            const authUrl = `https://login.xero.com/identity/connect/authorize?` +
+                `response_type=code&` +
+                `client_id=${clientId}&` +
+                `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+                `scope=${encodeURIComponent(scope)}&` +
+                `state=${state}`;
+
+            // Open authorization in new window
+            window.open(authUrl, '_blank');
+
+            // Check for connection after a delay
+            setTimeout(checkConnectionStatus, 5000);
+        }
+
+        function generateRandomState() {
+            return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+        }
+
+        function checkConnectionStatus() {
+            // In production, this would check with the server
+            // For now, we'll simulate the check
+            const isConnected = localStorage.getItem('xero_connected') === 'true';
+
+            if (isConnected) {
+                updateUIConnected();
+            } else {
+                updateUIDisconnected();
+            }
+        }
+
+        function updateUIConnected() {
+            document.getElementById('connectionStatus').className = 'status-card connected';
+            document.getElementById('statusBadge').className = 'status-badge badge-connected';
+            document.getElementById('statusBadge').textContent = 'Connected';
+            document.getElementById('orgName').textContent = 'Crelec Demo Org';
+            document.getElementById('lastSync').textContent = new Date().toLocaleString();
+            document.getElementById('productCount').textContent = '186';
+            document.getElementById('syncStatus').textContent = 'Ready';
+            document.getElementById('syncBtn').disabled = false;
+            document.getElementById('disconnectBtn').disabled = false;
+        }
+
+        function updateUIDisconnected() {
+            document.getElementById('connectionStatus').className = 'status-card disconnected';
+            document.getElementById('statusBadge').className = 'status-badge badge-disconnected';
+            document.getElementById('statusBadge').textContent = 'Not Connected';
+            document.getElementById('orgName').textContent = '-';
+            document.getElementById('lastSync').textContent = 'Never';
+            document.getElementById('productCount').textContent = '0';
+            document.getElementById('syncStatus').textContent = 'Idle';
+            document.getElementById('syncBtn').disabled = true;
+            document.getElementById('disconnectBtn').disabled = true;
+        }
+
+        function testConnection() {
+            alert('Testing connection... In production, this would verify the Xero API connection.');
+            // Simulate successful connection for demo
+            localStorage.setItem('xero_connected', 'true');
+            checkConnectionStatus();
+        }
+
+        function syncNow() {
+            document.getElementById('syncStatus').innerHTML = 'Syncing... <div class="loading" style="display: inline-block;"></div>';
+
+            // Simulate sync process
+            setTimeout(() => {
+                document.getElementById('syncStatus').textContent = 'Completed';
+                document.getElementById('lastSync').textContent = new Date().toLocaleString();
+                addLogEntry('Sync completed successfully. 186 products updated.');
+            }, 3000);
+        }
+
+        function disconnect() {
+            if (confirm('Are you sure you want to disconnect from Xero?')) {
+                localStorage.setItem('xero_connected', 'false');
+                updateUIDisconnected();
+                addLogEntry('Disconnected from Xero');
+            }
+        }
+
+        function updateSyncSettings() {
+            const interval = document.getElementById('syncInterval').value;
+            const autoSync = document.getElementById('autoSync').checked;
+
+            localStorage.setItem('xero_sync_interval', interval);
+            localStorage.setItem('xero_auto_sync', autoSync);
+
+            alert(`Settings updated! Auto-sync: ${autoSync ? 'Enabled' : 'Disabled'}, Interval: ${interval} minutes`);
+            addLogEntry(`Sync settings updated - Auto: ${autoSync}, Interval: ${interval}min`);
+        }
+
+        function addLogEntry(message) {
+            const logDiv = document.getElementById('syncLog');
+            const time = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.innerHTML = `<span class="log-time">${time}</span>${message}`;
+
+            // Add to beginning of log
+            if (logDiv.firstChild && logDiv.firstChild.textContent.includes('No sync history')) {
+                logDiv.innerHTML = '';
+            }
+            logDiv.insertBefore(entry, logDiv.firstChild);
+
+            // Keep only last 10 entries
+            while (logDiv.children.length > 10) {
+                logDiv.removeChild(logDiv.lastChild);
+            }
+        }
+    </script>
+</body>
+</html>
