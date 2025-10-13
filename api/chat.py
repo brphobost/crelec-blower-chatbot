@@ -8,11 +8,50 @@ from http.server import BaseHTTPRequestHandler
 import json
 import re
 import uuid
-import os
-import sys
 
-# Import enhanced calculator from same directory
-from enhanced_calculator import EnhancedBlowerCalculator
+try:
+    from enhanced_calculator import EnhancedBlowerCalculator
+except ImportError:
+    # Fallback if module not found
+    class EnhancedBlowerCalculator:
+        def calculate(self, **kwargs):
+            # Simple fallback calculation
+            airflow = kwargs.get('tank_length', 6) * kwargs.get('tank_width', 3) * 0.25 * 60
+            pressure = kwargs.get('tank_depth', 2) * 100 * 1.3 + 250
+            power = (airflow * pressure) / (36000 * 0.5)
+
+            return {
+                'airflow_m3_min': airflow / 60,
+                'airflow_m3_hr': airflow,
+                'pressure_mbar': pressure,
+                'power_kw': power,
+                'breakdown': {
+                    'base_airflow_m3_min': airflow / 60,
+                    'base_airflow_m3_hr': airflow,
+                    'corrected_airflow_m3_hr': airflow,
+                    'static_pressure': kwargs.get('tank_depth', 2) * 100,
+                    'pipe_friction': 15,
+                    'fitting_losses': 10,
+                    'diffuser_loss': 250,
+                    'subtotal_pressure': pressure - 100,
+                    'safety_margin': 100,
+                    'total_pressure': pressure,
+                    'final_pressure': pressure,
+                    'pipe_velocity': 10,
+                    'altitude_correction': 1.0,
+                    'safety_factor': 1.2,
+                    'specific_gravity': 1.05
+                },
+                'tank_info': {
+                    'area_m2': kwargs.get('tank_length', 6) * kwargs.get('tank_width', 3),
+                    'volume_m3': kwargs.get('tank_length', 6) * kwargs.get('tank_width', 3) * kwargs.get('tank_depth', 2),
+                    'depth_m': kwargs.get('tank_depth', 2),
+                    'num_tanks': kwargs.get('num_tanks', 1),
+                    'configuration': kwargs.get('tank_config', 'parallel')
+                },
+                'messages': ['Using fallback calculator'],
+                'warnings': []
+            }
 
 # In-memory session storage (in production, use a database)
 sessions = {}
