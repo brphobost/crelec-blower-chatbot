@@ -66,15 +66,21 @@ class handler(BaseHTTPRequestHandler):
             token_url = 'https://identity.xero.com/connect/token'
 
             # Get credentials from environment variables
-            client_id = os.environ.get('XERO_CLIENT_ID', '')
-            client_secret = os.environ.get('XERO_CLIENT_SECRET', '')
+            client_id = os.environ.get('XERO_CLIENT_ID', '').strip()
+            client_secret = os.environ.get('XERO_CLIENT_SECRET', '').strip()
             redirect_uri = 'https://blower-chatbot.vercel.app/api/xero-callback'
+
+            # Debug logging (remove in production)
+            print(f"Client ID present: {bool(client_id)}")
+            print(f"Client Secret present: {bool(client_secret)}")
+            print(f"Redirect URI: {redirect_uri}")
 
             # Prepare token request
             token_data = urlencode({
                 'grant_type': 'authorization_code',
                 'code': code,
-                'redirect_uri': redirect_uri
+                'redirect_uri': redirect_uri,
+                'client_id': client_id  # Some OAuth providers need this in the body too
             }).encode('utf-8')
 
             # Create Basic Auth header
@@ -197,18 +203,41 @@ class handler(BaseHTTPRequestHandler):
             except HTTPError as e:
                 # Token exchange failed
                 error_data = e.read().decode() if e.fp else ''
+
+                # Parse error if it's JSON
+                try:
+                    error_json = json.loads(error_data)
+                    error_message = error_json.get('error', 'Unknown error')
+                    error_desc = error_json.get('error_description', '')
+                except:
+                    error_message = error_data
+                    error_desc = ''
+
                 self.send_response(400)
                 self.send_header('Content-Type', 'text/html')
                 self.end_headers()
                 self.wfile.write(f"""
                 <html>
                     <head><title>Token Exchange Failed</title></head>
-                    <body style="font-family: Arial, sans-serif; padding: 40px; text-align: center;">
+                    <body style="font-family: Arial, sans-serif; padding: 40px; max-width: 600px; margin: 0 auto;">
                         <h1 style="color: #dc3545;">Token Exchange Failed</h1>
-                        <p>Could not exchange authorization code for access token.</p>
-                        <p>Status: {e.code}</p>
-                        <p>Error: {error_data}</p>
-                        <a href="/">Return to Chatbot</a>
+                        <div style="background: #f8d7da; border: 1px solid #f5c6cb; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                            <p><strong>Error:</strong> {error_message}</p>
+                            {"<p><strong>Description:</strong> " + error_desc + "</p>" if error_desc else ""}
+                            <p><strong>Status Code:</strong> {e.code}</p>
+                        </div>
+
+                        <div style="background: #fff3cd; border: 1px solid #ffecd1; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                            <h3>Troubleshooting:</h3>
+                            <ul style="text-align: left;">
+                                <li>Verify the redirect URI in Xero matches: <code>https://blower-chatbot.vercel.app/api/xero-callback</code></li>
+                                <li>Check that Client ID and Secret are correctly set in Vercel environment variables</li>
+                                <li>Ensure the Xero app is not in demo mode</li>
+                                <li>Try regenerating the Client Secret in Xero if needed</li>
+                            </ul>
+                        </div>
+
+                        <a href="/xero-admin.html" style="display: inline-block; margin-top: 20px; padding: 10px 20px; background: #007bff; color: white; text-decoration: none; border-radius: 5px;">Back to Admin Panel</a>
                     </body>
                 </html>
                 """.encode())
