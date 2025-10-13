@@ -1,32 +1,42 @@
 # Crelec Blower Selection Chatbot - Development Documentation
 
 ## Project Overview
-An intelligent chatbot system for Crelec S.A. that helps end-users select the right blower for their applications through a conversational interface. The system calculates requirements based on user inputs, matches products from inventory, and generates professional PDF quotes.
+An intelligent chatbot system for Crelec S.A. that helps end-users select the right blower for their applications through a conversational interface. The system now features **professional-grade engineering calculations** including pipe losses, diffuser selection, and multiple tank configurations, with integrated Xero inventory management capabilities.
 
-## Current Version: v1.6.5
+## Current Version: v2.0.0 (October 2024)
 - **Live URL**: https://blower-chatbot.vercel.app
 - **Repository**: https://github.com/brphobost/crelec-blower-chatbot
 - **Deployment**: Vercel (auto-deploys from GitHub)
+- **Status**: Production-ready with enhanced calculations
 
-## ✅ Completed Features (MVP)
+## ✅ Completed Features (v2.0.0)
 
-### 1. **Core Calculation Engine**
-- Simple tank volume calculations (L × W × H)
-- Airflow requirement calculation with safety factor (1.2)
-- Pressure calculation based on:
-  - Water depth (hydrostatic pressure)
-  - System losses (150 mbar default)
-  - Altitude correction
-- Power estimation based on flow and pressure
+### 1. **Professional Calculation Engine** (NEW - Oct 2024)
+- **Enhanced Calculator Module** (`enhanced_calculator.py`)
+  - Pipe friction losses using Darcy-Weisbach formula
+  - Fitting losses with K-factors for 90° bends
+  - Diffuser pressure drop tables (fine/coarse/disc/tube)
+  - Multiple tank configurations (series/parallel)
+  - Detailed calculation breakdown with all components
+  - Pipe velocity validation and warnings
+- **Comprehensive Documentation** (`CALCULATIONS.md`)
+  - All formulas from manufacturer specifications
+  - Industry-standard pressure calculations
+  - Validation ranges and assumptions
 
-### 2. **Conversational Chat Interface**
-- Progressive data collection flow:
-  1. Tank dimensions input
+### 2. **Enhanced Conversational Flow** (UPDATED - Oct 2024)
+- **Professional data collection**:
+  1. Operation type (compression/vacuum)
   2. Altitude/location specification
-  3. Application type selection (Waste Water, Fish Hatchery, Industrial)
-  4. Email collection for quote delivery
-- Session management with state machine
-- Input validation and error handling
+  3. Application type selection
+  4. **Tank configuration** (NEW) - number of tanks, series/parallel
+  5. Tank dimensions (L×W×D)
+  6. **Pipe system details** (NEW) - diameter, length, bends
+  7. **Diffuser type selection** (NEW) - fine bubble, disc, coarse, tube
+  8. Email for quote delivery
+- **Stateless session management** for Vercel serverless
+- **Client-side state tracking** for reliable operation
+- Input validation with smart defaults
 - Mobile-responsive design
 
 ### 3. **Smart Product Matching**
@@ -61,6 +71,23 @@ An intelligent chatbot system for Crelec S.A. that helps end-users select the ri
 - Floating chat button option
 - Iframe integration available
 - Maintains full functionality
+
+### 7. **Xero Integration** (NEW - Oct 2024)
+- **OAuth2 Authentication** implemented
+- **Token Management** with automatic refresh
+- **Inventory Sync Module** (`xero_integration.py`)
+  - Fetch items from Xero API
+  - Map to blower products
+  - Real-time stock levels
+  - Automatic price updates
+- **Admin Panel** (`xero-admin.html`)
+  - Connect/disconnect Xero
+  - View sync status
+  - Manual sync trigger
+- **Documentation** (`XERO_INTEGRATION.md`)
+  - Complete integration guide
+  - API usage details
+  - Security considerations
 
 ## 🚧 Known Issues / Limitations
 
@@ -188,6 +215,36 @@ An intelligent chatbot system for Crelec S.A. that helps end-users select the ri
 - WhatsApp Business API for mobile users
 - Historical quote tracking and follow-up
 
+## 🔧 Key Technical Improvements (October 2024)
+
+### 1. **Stateless Architecture for Vercel**
+- **Problem**: Vercel serverless functions don't maintain memory between requests
+- **Solution**: Client-side state management
+  - Frontend tracks conversation state
+  - State sent with each request
+  - Backend returns updated state
+  - Ensures reliable conversation flow
+
+### 2. **Professional Calculation Accuracy**
+- Pipe losses using Darcy-Weisbach equation
+- K-factor calculations for fittings
+- Industry-standard diffuser pressure drops
+- Multiple tank configurations properly handled
+- Altitude corrections for South African locations
+
+### 3. **Enhanced User Experience**
+- Smart defaults based on application type
+- Input validation with helpful ranges
+- Detailed calculation breakdown showing all components
+- Warnings for edge cases (high velocity, pressure)
+- "Type 'default'" option for pipe specifications
+
+### 4. **Xero Integration Architecture**
+- OAuth2 flow with PKCE for security
+- Token storage with automatic refresh
+- Fallback calculator if module fails to load
+- Real-time inventory synchronization capability
+
 ## ⚠️ IMPORTANT: VERSION MANAGEMENT
 
 ### When Making Changes:
@@ -254,7 +311,33 @@ An intelligent chatbot system for Crelec S.A. that helps end-users select the ri
 - Expand to mobile messaging platforms
 - Integration with existing business systems
 
-## 🚀 Quick Commands
+## 🚀 Quick Start for Developers
+
+### Project Structure:
+```
+blower-chatbot/
+├── api/                    # Vercel serverless functions
+│   ├── chat.py            # Main chat handler (stateless)
+│   ├── enhanced_calculator.py  # Professional calculations
+│   └── xero-callback.py   # OAuth callback handler
+├── backend/               # Backend modules
+│   ├── comprehensive_calculator.py
+│   ├── xero_integration.py
+│   └── xero_token_storage.py
+├── frontend/              # Frontend files
+│   ├── index.html
+│   ├── chat.js           # Client with state tracking
+│   └── xero-admin.html   # Xero admin interface
+├── CALCULATIONS.md        # Engineering formulas
+├── XERO_INTEGRATION.md    # Xero setup guide
+└── CLAUDE.md             # This file
+```
+
+### Key Files to Edit:
+- **Chat Flow**: `api/chat.py` - Add new questions/states
+- **Calculations**: `api/enhanced_calculator.py` - Modify formulas
+- **Frontend**: `frontend/chat.js` - Update UI/UX
+- **Formulas**: `CALCULATIONS.md` - Document changes
 
 ### Local Development:
 ```bash
@@ -516,7 +599,20 @@ pressure = depth * 100 * 1.3 + 50 + altitude_correction
 
 ## 📈 Changelog
 
-### v1.6.5 (Sept 29, 2025)
+### v2.0.0 (Oct 14, 2024) - MAJOR UPDATE
+**Professional Engineering Calculations Release**
+- **NEW**: Enhanced calculator with pipe losses and diffuser selection
+- **NEW**: Multiple tank support (series/parallel configurations)
+- **NEW**: Detailed pressure component breakdown
+- **NEW**: Pipe system parameter collection (diameter, length, bends)
+- **NEW**: Diffuser type selection (fine, disc, coarse, tube)
+- **NEW**: Xero integration with OAuth2 authentication
+- **NEW**: CALCULATIONS.md documentation with all formulas
+- **FIX**: Stateless operation for Vercel serverless functions
+- **FIX**: Client-side state tracking for reliable conversations
+- **FIX**: HTTP header ordering bug causing 500 errors
+
+### v1.6.5 (Sept 29, 2024)
 - Fixed PDF generation to handle new data formats
 - Proper unit display in quotes
 
@@ -617,6 +713,39 @@ pressure = depth * 100 * 1.3 + 50 + altitude_correction
 - Chat interface
 - Simple product recommendations
 
+## 🔍 Troubleshooting Guide
+
+### Common Issues:
+
+#### 1. **"500 Internal Server Error"**
+- **Cause**: Usually HTTP headers sent before response status
+- **Fix**: Ensure `send_response(200)` comes before `send_header()`
+
+#### 2. **Conversation Stuck at Greeting**
+- **Cause**: Stateless serverless functions losing session
+- **Fix**: Frontend must track and send state with each request
+
+#### 3. **Module Import Errors**
+- **Cause**: Vercel can't find backend modules
+- **Fix**: Copy modules to `/api` directory or use fallback
+
+#### 4. **CORS Errors**
+- **Cause**: Missing Access-Control headers
+- **Fix**: Add CORS headers to ALL responses including errors
+
+#### 5. **Xero Connection Issues**
+- **Cause**: Invalid client credentials or redirect URI mismatch
+- **Fix**: Verify credentials in Vercel env vars match Xero app
+
+### Testing Checklist:
+- [ ] Test full conversation flow
+- [ ] Verify calculations with known values
+- [ ] Check PDF generation
+- [ ] Test on mobile devices
+- [ ] Verify Xero integration (if enabled)
+- [ ] Check error handling
+
 ---
 
+*Last Updated: October 14, 2024 - v2.0.0*
 *This document should be updated with each significant change to maintain accurate project status.*
