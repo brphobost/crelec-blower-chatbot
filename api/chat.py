@@ -65,12 +65,7 @@ class handler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_POST(self):
-        # CORS headers
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
-
-        # Parse request
+        # Parse request first
         content_length = int(self.headers['Content-Length'])
         post_data = self.rfile.read(content_length)
 
@@ -127,6 +122,7 @@ class handler(BaseHTTPRequestHandler):
                 )
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json')
+                self.send_header('Access-Control-Allow-Origin', '*')
                 self.end_headers()
                 self.wfile.write(json.dumps(response).encode())
                 return
@@ -180,6 +176,7 @@ class handler(BaseHTTPRequestHandler):
                 )
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json')
+                self.send_header('Access-Control-Allow-Origin', '*')
                 self.end_headers()
                 self.wfile.write(json.dumps(response).encode())
                 return
@@ -241,6 +238,7 @@ class handler(BaseHTTPRequestHandler):
                 )
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json')
+                self.send_header('Access-Control-Allow-Origin', '*')
                 self.end_headers()
                 self.wfile.write(json.dumps(response).encode())
                 return
@@ -319,6 +317,7 @@ class handler(BaseHTTPRequestHandler):
                     )
                     self.send_response(200)
                     self.send_header('Content-Type', 'application/json')
+                    self.send_header('Access-Control-Allow-Origin', '*')
                     self.end_headers()
                     self.wfile.write(json.dumps(response).encode())
                     return
@@ -526,8 +525,11 @@ class handler(BaseHTTPRequestHandler):
             else:
                 response['message'] = "Thank you for using Crelec Blower Selection. Type 'restart' for a new calculation."
 
-        # Send response
+        # Send response with CORS headers
         self.send_response(200)
         self.send_header('Content-Type', 'application/json')
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
         self.end_headers()
         self.wfile.write(json.dumps(response).encode())
