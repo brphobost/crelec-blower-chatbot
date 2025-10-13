@@ -1,198 +1,74 @@
+"""
+Enhanced Chat Handler for Vercel Deployment
+Includes pipe system, diffuser selection, and multiple tanks
+Uses the enhanced calculator for professional calculations
+"""
+
 from http.server import BaseHTTPRequestHandler
 import json
-from datetime import datetime
-import uuid
 import re
+import uuid
+import os
+import sys
 
-# In-memory storage for sessions
+# Add backend directory to path for imports
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'backend'))
+from enhanced_calculator import EnhancedBlowerCalculator
+
+# In-memory session storage (in production, use a database)
 sessions = {}
 
-import urllib.request
-import urllib.parse
-
-# Load products from Google Sheets or fallback to JSON
-def load_products():
-    """Load products from Google Sheets or fallback to local JSON"""
-    try:
-        # Try to load from Google Sheets first
-        SHEET_ID = "14x7T9cHol94jk3w4CgZggKIYrYSMpefRrflYfC0HUk4"
-        SHEET_NAME = "Sheet1"
-
-        # Build Google Sheets API URL (using visualization API for public sheets)
-        csv_url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:json&sheet={SHEET_NAME}"
-
-        # Fetch data from Google Sheets
-        with urllib.request.urlopen(csv_url) as response:
-            raw_data = response.read().decode('utf-8')
-
-        # Parse Google Visualization API response
-        # Remove the JavaScript wrapper to get JSON
-        json_str = raw_data.split('(', 1)[1].rsplit(')', 1)[0]
-        data = json.loads(json_str)
-
-        # Convert to our product format
-        products = []
-        rows = data['table']['rows']
-
-        # Skip header row, process data rows
-        for row in rows[1:]:  # Assuming first row is headers
-            try:
-                cells = row['c']
-                # Match simplified format: Model, Airflow, Pressure, Power, In Stock
-                if cells[0] and cells[0].get('v'):  # Check model exists
-                    airflow_m3_min = float(cells[1]['v']) if cells[1] and cells[1].get('v') else 0
-                    product = {
-                        'model': cells[0]['v'],
-                        'airflow_m3_min': airflow_m3_min,  # Keep in m³/min
-                        'airflow': airflow_m3_min * 60,  # Also store in m³/hr for compatibility
-                        'pressure': float(cells[2]['v']) if cells[2] and cells[2].get('v') else 0,
-                        'power': float(cells[3]['v']) if cells[3] and cells[3].get('v') else 0,
-                        'in_stock': str(cells[4]['v']).lower() == 'yes' if cells[4] and cells[4].get('v') else False
-                    }
-
-                    # Only add if essential fields are present
-                    if product['model'] and airflow_m3_min > 0:
-                        products.append(product)
-            except (IndexError, KeyError, ValueError, TypeError) as e:
-                continue  # Skip malformed rows
-
-        print(f"Loaded {len(products)} products from Google Sheets")
-        return products
-
-    except Exception as e:
-        print(f"Error loading from Google Sheets: {e}, falling back to local JSON")
-        # Fallback to local JSON
-        try:
-            with open('frontend/products_simplified.json', 'r') as f:
-                products_data = json.load(f)
-                return products_data['products']
-        except:
-            try:
-                with open('frontend/products.json', 'r') as f:
-                    products_data = json.load(f)
-                    # Convert old format to simplified format
-                    simplified = []
-                    for p in products_data['products']:
-                        simplified.append({
-                            'model': p.get('model', ''),
-                            'airflow': (p.get('airflow_min', 0) + p.get('airflow_max', 0)) / 2,
-                            'pressure': (p.get('pressure_min', 0) + p.get('pressure_max', 0)) / 2,
-                            'power': p.get('power', 0),
-                            'in_stock': p.get('stock_status') == 'in_stock'
-                        })
-                    return simplified
-            except Exception as e:
-                print(f"Error loading products: {e}")
-                return []  # Return empty list if loading fails
-
-PRODUCTS = load_products()
-
-def match_products(airflow_required, pressure_required):
-    """Smart product matching with simplified catalog format
-
-    Args:
-        airflow_required: Required airflow in m³/min
-        pressure_required: Required pressure in mbar
-    """
-    matches = []
-
-    for product in PRODUCTS:
-        # Skip if product doesn't have required fields
-        if not all(k in product for k in ['airflow_m3_min', 'pressure', 'power']):
-            # Try alternative field names
-            if not all(k in product for k in ['airflow', 'pressure', 'power']):
-                continue
-
-        score = 0
-        match_type = ""
-
-        # Get product specs in m³/min
-        product_airflow = product.get('airflow_m3_min', product.get('airflow', 0) / 60)  # Convert if needed
-        product_pressure = product.get('pressure', 0)
-
-        # Check if product meets minimum requirements
-        if product_airflow >= airflow_required and product_pressure >= pressure_required:
-            # Calculate how much oversized the product is
-            airflow_excess = (product_airflow - airflow_required) / airflow_required if airflow_required > 0 else 0
-            pressure_excess = (product_pressure - pressure_required) / pressure_required if pressure_required > 0 else 0
-
-            # Perfect match (within 20% oversized)
-            if airflow_excess <= 0.2 and pressure_excess <= 0.2:
-                score = 100
-                match_type = "Perfect Match"
-            # Good match (within 50% oversized)
-            elif airflow_excess <= 0.5 and pressure_excess <= 0.5:
-                score = 80
-                match_type = "Recommended"
-            # Acceptable match (meets requirements but oversized)
-            else:
-                score = 60 - (airflow_excess * 10) - (pressure_excess * 10)
-                match_type = "Higher Capacity Option"
-
-        # For very small requirements, recommend smallest suitable blower
-        elif product_pressure >= pressure_required:
-            # Product meets pressure but not airflow - still consider it
-            score = 40 - (airflow_required - product_airflow) / 10
-            match_type = "Minimum Available"
-
-        # Stock status bonus
-        if score > 0:
-            if product.get('in_stock', False):
-                score += 10
-            else:
-                score -= 5
-
-            matches.append({
-                'product': product,
-                'score': score,
-                'match_type': match_type
-            })
-
-    # Sort by score and return top 3
-    matches.sort(key=lambda x: x['score'], reverse=True)
-    return matches[:3]
-
-def validate_email(email):
-    """Basic email validation"""
-    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-    return re.match(pattern, email) is not None
-
 class handler(BaseHTTPRequestHandler):
-    def do_POST(self):
-        # Set CORS headers
+    def do_OPTIONS(self):
         self.send_response(200)
-        self.send_header('Content-type', 'application/json')
         self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+        self.send_header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS')
         self.send_header('Access-Control-Allow-Headers', 'Content-Type')
         self.end_headers()
 
-        # Read request body
+    def do_POST(self):
+        # CORS headers
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+
+        # Parse request
         content_length = int(self.headers['Content-Length'])
         post_data = self.rfile.read(content_length)
-        data = json.loads(post_data.decode('utf-8'))
 
-        session_id = data.get('session_id')
+        try:
+            data = json.loads(post_data.decode('utf-8'))
+        except:
+            self.send_error(400, "Invalid JSON")
+            return
+
         message = data.get('message', '').strip()
+        session_id = data.get('session_id')
 
         # Get or create session
-        if session_id not in sessions:
+        if not session_id or session_id not in sessions:
+            session_id = str(uuid.uuid4())
             sessions[session_id] = {
-                'state': 'welcome',
+                'state': 'greeting',
                 'data': {},
-                'calculation': {}
+                'conversation': []
             }
 
         session = sessions[session_id]
         response = {'session_id': session_id}
 
-        # State machine for conversation flow
-        if session['state'] == 'welcome':
+        # Add user message to conversation history
+        session['conversation'].append({'role': 'user', 'message': message})
+
+        # Handle conversation states
+        if session['state'] == 'greeting':
             response['message'] = (
-                "Welcome! Let's select the right blower for your needs.\\n\\n"
-                "First, what type of operation do you need?\\n\\n"
-                "• **Compression** (Blowing air into tanks, aeration)\\n"
-                "• **Vacuum** (Suction, extraction, conveying)\\n\\n"
+                "👋 Hi! I'm the Crelec Blower Selection Assistant.\\n\\n"
+                "I'll help you find the perfect blower for your application. "
+                "Let's start with some questions.\\n\\n"
+                "**What type of operation do you need?**\\n\\n"
+                "• **Compression** (blowing/aeration)\\n"
+                "• **Vacuum** (suction/extraction)\\n\\n"
                 "Please type 'compression' or 'vacuum':"
             )
             session['state'] = 'operation_type'
@@ -211,6 +87,9 @@ class handler(BaseHTTPRequestHandler):
                     "• 'compression' for blowing/aeration\\n"
                     "• 'vacuum' for suction/extraction"
                 )
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
                 self.wfile.write(json.dumps(response).encode())
                 return
 
@@ -225,12 +104,8 @@ class handler(BaseHTTPRequestHandler):
             )
             session['state'] = 'altitude'
 
-        # Installation step removed - not used in calculations
-
         elif session['state'] == 'altitude':
-            # Store altitude info
             session['data']['altitude_text'] = message
-            # Simple altitude parsing (will be enhanced with location handler)
             try:
                 altitude = float(re.findall(r'\d+', message)[0]) if re.findall(r'\d+', message) else 500
             except:
@@ -265,18 +140,72 @@ class handler(BaseHTTPRequestHandler):
                     "• 'fish' for aquaculture\\n"
                     "• 'industrial' for general processes"
                 )
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
                 self.wfile.write(json.dumps(response).encode())
                 return
 
             response['message'] = (
                 f"✅ {app_msg} selected.\\n\\n"
-                "**OPERATIONAL DATA**\\n\\n"
-                "Let's start with your tank/system dimensions.\\n"
-                "Please provide tank size in meters:\\n\\n"
-                "• Length × Width × Depth (e.g., '6 3 2')\\n\\n"
-                "Tank dimensions:"
+                "**TANK CONFIGURATION**\\n\\n"
+                "How many tanks do you have? (1-10)\\n"
+                "If you have multiple tanks, are they in 'series' or 'parallel'?\\n\\n"
+                "Examples:\\n"
+                "• '1' for single tank\\n"
+                "• '3 parallel' for 3 tanks in parallel\\n"
+                "• '2 series' for 2 tanks in series\\n\\n"
+                "Number of tanks and configuration:"
             )
-            session['state'] = 'dimensions'
+            session['state'] = 'tank_config'
+
+        elif session['state'] == 'tank_config':
+            # Parse tank configuration
+            msg_lower = message.lower().strip()
+            parts = msg_lower.split()
+
+            try:
+                # Extract number
+                num_tanks = 1
+                for part in parts:
+                    if part.isdigit():
+                        num_tanks = int(part)
+                        break
+
+                # Extract configuration
+                if 'series' in msg_lower:
+                    config = 'series'
+                elif 'parallel' in msg_lower:
+                    config = 'parallel'
+                else:
+                    config = 'parallel' if num_tanks > 1 else 'single'
+
+                session['data']['num_tanks'] = num_tanks
+                session['data']['tank_config'] = config
+
+                config_msg = f"{num_tanks} tank{'s' if num_tanks > 1 else ''}"
+                if num_tanks > 1:
+                    config_msg += f" in {config}"
+
+                response['message'] = (
+                    f"✅ {config_msg} configured.\\n\\n"
+                    "**TANK DIMENSIONS**\\n\\n"
+                    "Please provide tank size in meters:\\n"
+                    "• Length × Width × Depth (e.g., '6 3 2')\\n\\n"
+                    "Tank dimensions:"
+                )
+                session['state'] = 'dimensions'
+
+            except:
+                response['message'] = (
+                    "Please enter a number between 1-10, optionally followed by 'series' or 'parallel'\\n"
+                    "Examples: '1', '3 parallel', '2 series'"
+                )
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps(response).encode())
+                return
 
         elif session['state'] == 'dimensions':
             try:
@@ -287,192 +216,280 @@ class handler(BaseHTTPRequestHandler):
                     session['data']['width'] = width
                     session['data']['height'] = height
 
-                    # Calculate requirements
-                    tank_volume = length * width * height
-                    tank_area = length * width  # m²
-
-                    # Calculate airflow based on application (using formulas from reference)
-                    app_type = session['data'].get('application', 'industrial')
-                    if app_type == 'waste_water':
-                        # Waste water: Q = tank area × 0.25 m³/min
-                        airflow_m3_min = tank_area * 0.25
-                        app_display = "Waste Water Treatment"
-                    elif app_type == 'fish_hatchery':
-                        # Fish hatchery: Q = pond area × (0.0015 to 0.0025) m³/min
-                        # Using middle value 0.002
-                        airflow_m3_min = tank_area * 0.002
-                        app_display = "Fish Farming/Aquaculture"
-                    else:
-                        # Industrial: Using conservative estimate
-                        airflow_m3_min = tank_area * 0.1
-                        app_display = "Industrial Process"
-
-                    # Keep in m³/min for calculations and display
-                    airflow_required = round(airflow_m3_min, 3)  # m³/min
-
-                    # Pressure calculation based on formulas
-                    # P = tank depth H(cm) × solution specific gravity r × (1.2~1.5)
-                    # Converting: H(cm) × 1 × 1.3 = H(m) × 100 × 1.3 = H(m) × 130 mbar
-
-                    depth_pressure = height * 100 * 1.3  # depth in cm × gravity × safety factor
-
-                    # Add system losses (pipes, diffusers)
-                    system_losses = 50  # Reduced from 150 as depth pressure includes safety
-
-                    # Altitude correction
-                    altitude = session['data'].get('altitude', 500)
-                    altitude_correction = (altitude / 100) * 12
-
-                    pressure_required = round(depth_pressure + system_losses + altitude_correction, 1)
-
-                    # Power estimate
-                    power_estimate = round((airflow_required / 3600) * pressure_required / 600, 2)
-
-                    # Store calculation results
-                    session['calculation'] = {
-                        'airflow_required': airflow_required,  # m³/min
-                        'airflow_required_hr': airflow_required * 60,  # m³/hr for display
-                        'pressure_required': pressure_required,
-                        'power_estimate': power_estimate,
-                        'tank_volume': round(tank_volume, 1),
-                        'application_type': app_display
-                    }
-
-                    # Get matched products
-                    matched_products = match_products(airflow_required, pressure_required)
-                    session['matched_products'] = matched_products
-
-                    # Set state to email collection
-                    session['state'] = 'email'
-
                     response['message'] = (
-                        f"✅ Tank dimensions: {length}m × {width}m × {height}m = {tank_volume:.0f}m³\\n\\n"
-                        f"**Calculation Complete!**\\n\\n"
-                        f"Based on your requirements:\\n"
-                        f"• Tank Volume: {round(tank_volume, 1)} m³\\n"
-                        f"• Required Airflow: {airflow_required} m³/min ({airflow_required * 60:.1f} m³/hr)\\n"
-                        f"• Required Pressure: {pressure_required} mbar\\n"
-                        f"• Estimated Power: {power_estimate} kW\\n\\n"
-                        f"I've found {len(matched_products)} perfect blowers for your needs!\\n\\n"
-                        f"To receive your detailed quote with:\\n"
-                        f"• Technical specifications\\n"
-                        f"• Pricing and availability\\n"
-                        f"• Delivery times\\n"
-                        f"• Valid for 30 days\\n\\n"
-                        f"Please enter your email address:"
+                        f"✅ Tank: {length}m × {width}m × {height}m deep\\n\\n"
+                        "**PIPE SYSTEM**\\n\\n"
+                        "Please provide pipe details:\\n"
+                        "• Diameter in mm (e.g., 50, 100, 150)\\n"
+                        "• Length to tanks in meters\\n"
+                        "• Number of 90° bends\\n\\n"
+                        "Enter as: diameter length bends\\n"
+                        "Example: '100 50 4'\\n"
+                        "Or type 'default' to use standard values:\\n\\n"
+                        "Pipe specifications:"
                     )
+                    session['state'] = 'pipe_system'
                 else:
-                    response['message'] = "Please enter three numbers for length, width, and height (e.g., '6 3 2'):"
-            except ValueError:
-                response['message'] = "Please enter three valid numbers in meters (e.g., '6 3 2'):"
+                    response['message'] = "Please enter three numbers for length, width, and depth (in meters)"
+            except:
+                response['message'] = "Invalid format. Please enter: length width depth (e.g., '6 3 2')"
 
-        # Note: 'complete' state removed - calculation now happens in dimensions state
+        elif session['state'] == 'pipe_system':
+            msg_lower = message.lower().strip()
 
-        elif session['state'] == 'email':
-            # Validate email
-            if validate_email(message):
-                session['data']['email'] = message
-
-                # Generate quote ID
-                quote_id = f"Q{datetime.now().strftime('%Y%m%d')}-{str(uuid.uuid4())[:8].upper()}"
-                session['quote_id'] = quote_id
-
-                # Format products for display
-                products_summary = []
-                for i, match in enumerate(session.get('matched_products', [])[:3], 1):
-                    product = match['product']
-                    stock_emoji = "✅" if product.get('in_stock', False) else "⏱️"
-                    stock_text = "In Stock" if product.get('in_stock', False) else "On Order"
-
-                    # Get airflow in correct units
-                    airflow_m3_min = product.get('airflow_m3_min', product.get('airflow', 0) / 60)
-                    airflow_m3_hr = airflow_m3_min * 60
-
-                    products_summary.append(
-                        f"{i}. **{product['model']}** - {match['match_type']}\\n"
-                        f"   Airflow: {airflow_m3_min:.1f} m³/min ({airflow_m3_hr:.0f} m³/hr)\\n"
-                        f"   Pressure: {product.get('pressure', 0):.0f} mbar | Power: {product.get('power', 0)} kW\\n"
-                        f"   {stock_emoji} {stock_text}"
-                    )
-
-                response['message'] = (
-                    f"📧 **Thank you!**\\n\\n"
-                    f"Your detailed quote #{quote_id} will be sent to:\\n"
-                    f"📨 {message}\\n\\n"
-                    f"**Your recommended blowers:**\\n\\n" +
-                    "\\n\\n".join(products_summary) +
-                    f"\\n\\n**What happens next:**\\n"
-                    f"• You'll receive a detailed PDF quote\\n"
-                    f"• Our team will be notified\\n"
-                    f"• Someone may follow up within 24 hours\\n\\n"
-                    f"**Need immediate assistance?**\\n"
-                    f"📞 Call: +27 11 444 4555\\n"
-                    f"📧 Email: crelec@live.co.za"
-                )
-
-                # Prepare for sending email (will be handled by frontend)
-                response['send_email'] = True
-                response['email_data'] = {
-                    'to': message,
-                    'cc': 'crelec@live.co.za',
-                    'quote_id': quote_id,
-                    'calculation': session['calculation'],
-                    'products': session['matched_products'],
-                    'customer_data': session['data']
-                }
-
-                session['state'] = 'complete'
-
+            if msg_lower == 'default':
+                # Use default values based on application
+                app = session['data'].get('application', 'industrial')
+                if app == 'waste_water':
+                    session['data']['pipe_diameter'] = 100
+                    session['data']['pipe_length'] = 50
+                    session['data']['num_bends'] = 4
+                    pipe_msg = "100mm diameter, 50m length, 4 bends (default)"
+                else:
+                    session['data']['pipe_diameter'] = 50
+                    session['data']['pipe_length'] = 30
+                    session['data']['num_bends'] = 3
+                    pipe_msg = "50mm diameter, 30m length, 3 bends (default)"
             else:
-                response['message'] = (
-                    "Please enter a valid email address (e.g., john@example.com):"
-                )
+                try:
+                    parts = message.split()
+                    if len(parts) >= 3:
+                        diameter = float(parts[0])
+                        length = float(parts[1])
+                        bends = int(parts[2])
 
-        elif session['state'] == 'complete':
-            if 'new' in message.lower() or 'start' in message.lower():
-                # Reset session for new calculation
+                        # Validate ranges
+                        if diameter < 25 or diameter > 500:
+                            raise ValueError("Diameter must be 25-500mm")
+                        if length < 1 or length > 1000:
+                            raise ValueError("Length must be 1-1000m")
+                        if bends < 0 or bends > 20:
+                            raise ValueError("Bends must be 0-20")
+
+                        session['data']['pipe_diameter'] = diameter
+                        session['data']['pipe_length'] = length
+                        session['data']['num_bends'] = bends
+                        pipe_msg = f"{diameter}mm diameter, {length}m length, {bends} bends"
+                    else:
+                        raise ValueError("Need three values")
+                except Exception as e:
+                    response['message'] = (
+                        f"Invalid input: {str(e)}\\n\\n"
+                        "Please enter: diameter(mm) length(m) bends\\n"
+                        "Example: '100 50 4'\\n"
+                        "Or type 'default'"
+                    )
+                    self.send_response(200)
+                    self.send_header('Content-Type', 'application/json')
+                    self.end_headers()
+                    self.wfile.write(json.dumps(response).encode())
+                    return
+
+            response['message'] = (
+                f"✅ Pipe system: {pipe_msg}\\n\\n"
+                "**DIFFUSER TYPE**\\n\\n"
+                "What type of diffuser system will you use?\\n\\n"
+                "• **fine** - Fine bubble membrane (high efficiency)\\n"
+                "• **disc** - Ceramic disc diffusers\\n"
+                "• **coarse** - Coarse bubble/perforated pipe\\n"
+                "• **tube** - Tube diffusers\\n"
+                "• **custom** - Other/custom system\\n\\n"
+                "Type your choice:"
+            )
+            session['state'] = 'diffuser'
+
+        elif session['state'] == 'diffuser':
+            msg_lower = message.lower().strip()
+
+            diffuser_types = {
+                'fine': 'Fine bubble membrane',
+                'disc': 'Ceramic disc',
+                'coarse': 'Coarse bubble',
+                'tube': 'Tube diffusers',
+                'custom': 'Custom system'
+            }
+
+            # Find matching type
+            selected_type = None
+            for key, name in diffuser_types.items():
+                if key in msg_lower:
+                    selected_type = key
+                    selected_name = name
+                    break
+
+            if not selected_type:
+                if 'membrane' in msg_lower:
+                    selected_type = 'fine'
+                    selected_name = 'Fine bubble membrane'
+                elif 'ceramic' in msg_lower:
+                    selected_type = 'disc'
+                    selected_name = 'Ceramic disc'
+                elif 'perforated' in msg_lower:
+                    selected_type = 'coarse'
+                    selected_name = 'Coarse bubble'
+                else:
+                    selected_type = 'custom'
+                    selected_name = 'Custom system'
+
+            session['data']['diffuser_type'] = selected_type
+
+            # Now calculate with all parameters
+            calculator = EnhancedBlowerCalculator()
+
+            result = calculator.calculate(
+                tank_length=session['data']['length'],
+                tank_width=session['data']['width'],
+                tank_depth=session['data']['height'],
+                num_tanks=session['data'].get('num_tanks', 1),
+                tank_config=session['data'].get('tank_config', 'parallel'),
+                application=session['data'].get('application', 'industrial'),
+                altitude=session['data'].get('altitude', 0),
+                pipe_diameter=session['data'].get('pipe_diameter'),
+                pipe_length=session['data'].get('pipe_length'),
+                num_bends=session['data'].get('num_bends'),
+                diffuser_type=selected_type
+            )
+
+            # Format the detailed response
+            breakdown = result['breakdown']
+            tank_info = result['tank_info']
+
+            response['message'] = (
+                f"✅ {selected_name} selected.\\n\\n"
+                "═══════════════════════════════════════\\n"
+                "📊 **CALCULATION RESULTS**\\n"
+                "═══════════════════════════════════════\\n\\n"
+                f"**Required Specifications:**\\n"
+                f"• Airflow: **{result['airflow_m3_hr']:.1f} m³/hr** ({result['airflow_m3_min']:.3f} m³/min)\\n"
+                f"• Pressure: **{result['pressure_mbar']:.0f} mbar**\\n"
+                f"• Estimated Power: **{result['power_kw']:.1f} kW**\\n\\n"
+                "**Calculation Breakdown:**\\n"
+                "───────────────────────────\\n"
+                f"Base Airflow: {breakdown['base_airflow_m3_hr']:.1f} m³/hr\\n"
+                f"• Tank area: {tank_info['area_m2']:.1f} m² × factor\\n\\n"
+                "**Pressure Components:**\\n"
+                f"• Static head ({tank_info['depth_m']}m): {breakdown['static_pressure']:.0f} mbar\\n"
+                f"• Pipe losses: {breakdown['pipe_friction']:.0f} mbar\\n"
+                f"• Fitting losses: {breakdown['fitting_losses']:.0f} mbar\\n"
+                f"• Diffuser loss: {breakdown['diffuser_loss']:.0f} mbar\\n"
+                f"• Subtotal: {breakdown['subtotal_pressure']:.0f} mbar\\n"
+                f"• Safety margin ({(breakdown['safety_factor']-1)*100:.0f}%): {breakdown['safety_margin']:.0f} mbar\\n"
+                "───────────────────────────\\n"
+                f"**Total Required: {breakdown['final_pressure']:.0f} mbar**\\n"
+            )
+
+            # Add messages and warnings
+            if result['messages']:
+                response['message'] += "\\n**Notes:**\\n"
+                for msg in result['messages']:
+                    response['message'] += f"• {msg}\\n"
+
+            if result['warnings']:
+                response['message'] += "\\n⚠️ **Warnings:**\\n"
+                for warn in result['warnings']:
+                    response['message'] += f"• {warn}\\n"
+
+            response['message'] += (
+                "\\n═══════════════════════════════════════\\n\\n"
+                "Would you like to:\\n"
+                "• Get a **quote** with recommended products\\n"
+                "• **Recalculate** with different parameters\\n"
+                "• View **energy savings** with multiple blowers\\n\\n"
+                "Type 'quote', 'recalculate', or 'energy':"
+            )
+
+            # Store results for quote generation
+            session['data']['results'] = result
+            session['state'] = 'results'
+
+        elif session['state'] == 'results':
+            msg_lower = message.lower().strip()
+
+            if 'quote' in msg_lower:
+                response['message'] = (
+                    "📧 To receive your detailed quote, please enter your email address:\\n\\n"
+                    "We'll send you:\\n"
+                    "• Professional PDF quote\\n"
+                    "• Recommended blower models\\n"
+                    "• Technical specifications\\n"
+                    "• Pricing information\\n\\n"
+                    "Email address:"
+                )
+                session['state'] = 'email'
+
+            elif 'recalc' in msg_lower or 'again' in msg_lower:
+                # Reset session but keep some data
                 sessions[session_id] = {
-                    'state': 'operation_type',
+                    'state': 'greeting',
                     'data': {},
-                    'calculation': {}
+                    'conversation': []
                 }
                 response['message'] = (
-                    "Welcome! Let's select the right blower for your needs.\\n\\n"
-                    "First, what type of operation do you need?\\n\\n"
-                    "• **Compression** (Blowing air into tanks, aeration)\\n"
-                    "• **Vacuum** (Suction, extraction, conveying)\\n\\n"
+                    "Let's start over!\\n\\n"
+                    "**What type of operation do you need?**\\n\\n"
+                    "• **Compression** (blowing/aeration)\\n"
+                    "• **Vacuum** (suction/extraction)\\n\\n"
                     "Please type 'compression' or 'vacuum':"
                 )
-            else:
+                session['state'] = 'operation_type'
+
+            elif 'energy' in msg_lower:
+                # Show energy optimization comparison
                 response['message'] = (
-                    "Your quote has been sent!\\n\\n"
-                    "Would you like to:\\n"
-                    "• Start a new calculation (type 'new')\\n"
-                    "• Contact support (call +27 11 444 4555)"
+                    "⚡ **Energy Optimization Analysis**\\n"
+                    "═══════════════════════════════════════\\n\\n"
+                    "**Single Blower Configuration:**\\n"
+                    f"• Power required: {session['data']['results']['power_kw']:.1f} kW\\n"
+                    f"• Annual energy: {session['data']['results']['power_kw'] * 8760:.0f} kWh/year\\n"
+                    f"• Annual cost: R{session['data']['results']['power_kw'] * 8760 * 2:.0f}\\n\\n"
+                    "**Multiple Blower Benefits:**\\n"
+                    "• 2 blowers at 70% speed = 69% power\\n"
+                    "• 3 blowers at 60% speed = 43% power\\n"
+                    "• Potential savings: 30-50%\\n"
+                    "• Better turndown capability\\n"
+                    "• Redundancy for maintenance\\n\\n"
+                    "Would you like a quote? Type 'quote':"
                 )
+            else:
+                response['message'] = "Please type 'quote', 'recalculate', or 'energy':"
+
+        elif session['state'] == 'email':
+            # Email validation
+            if '@' in message and '.' in message:
+                session['data']['email'] = message
+                response['message'] = (
+                    "✅ Thank you! Your quote has been sent to " + message + "\\n\\n"
+                    "You'll receive:\\n"
+                    "• Detailed PDF quote\\n"
+                    "• Product recommendations\\n"
+                    "• Technical datasheets\\n\\n"
+                    "A Crelec representative will contact you soon.\\n\\n"
+                    "Type 'restart' for a new calculation."
+                )
+                session['state'] = 'complete'
+            else:
+                response['message'] = "Please enter a valid email address (e.g., name@company.com):"
+
+        elif session['state'] == 'complete':
+            if 'restart' in message.lower():
+                sessions[session_id] = {
+                    'state': 'greeting',
+                    'data': {},
+                    'conversation': []
+                }
+                response['message'] = (
+                    "Starting new calculation...\\n\\n"
+                    "**What type of operation do you need?**\\n\\n"
+                    "• **Compression** (blowing/aeration)\\n"
+                    "• **Vacuum** (suction/extraction)\\n\\n"
+                    "Please type 'compression' or 'vacuum':"
+                )
+                session['state'] = 'operation_type'
+            else:
+                response['message'] = "Thank you for using Crelec Blower Selection. Type 'restart' for a new calculation."
 
         # Send response
-        self.wfile.write(json.dumps(response).encode())
-
-    def do_OPTIONS(self):
-        # Handle CORS preflight
         self.send_response(200)
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Methods', 'POST, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        self.send_header('Content-Type', 'application/json')
         self.end_headers()
-
-    def do_GET(self):
-        # API status endpoint
-        self.send_response(200)
-        self.send_header('Content-type', 'application/json')
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.end_headers()
-
-        response = {
-            "name": "Crelec Blower Selection API",
-            "version": "2.0.0",
-            "status": "operational",
-            "features": ["product_matching", "email_quotes"]
-        }
         self.wfile.write(json.dumps(response).encode())
