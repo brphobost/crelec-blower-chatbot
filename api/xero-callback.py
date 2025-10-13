@@ -5,8 +5,10 @@ Handles the OAuth 2.0 callback from Xero after user authorization
 
 import json
 import os
-from urllib.parse import parse_qs
-import requests
+import base64
+from urllib.parse import parse_qs, urlencode
+from urllib.request import urlopen, Request
+from urllib.error import HTTPError
 from http.server import BaseHTTPRequestHandler
 
 class handler(BaseHTTPRequestHandler):
@@ -69,126 +71,132 @@ class handler(BaseHTTPRequestHandler):
             redirect_uri = 'https://blower-chatbot.vercel.app/api/xero-callback'
 
             # Prepare token request
-            token_data = {
+            token_data = urlencode({
                 'grant_type': 'authorization_code',
                 'code': code,
                 'redirect_uri': redirect_uri
-            }
+            }).encode('utf-8')
+
+            # Create Basic Auth header
+            credentials = f"{client_id}:{client_secret}"
+            auth_header = base64.b64encode(credentials.encode()).decode('ascii')
 
             # Make token request
-            token_response = requests.post(
+            token_request = Request(
                 token_url,
                 data=token_data,
-                auth=(client_id, client_secret),
-                headers={'Content-Type': 'application/x-www-form-urlencoded'}
+                headers={
+                    'Authorization': f'Basic {auth_header}',
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                }
             )
 
-            if token_response.status_code == 200:
-                # Success - got tokens
-                tokens = token_response.json()
-                access_token = tokens.get('access_token')
-                refresh_token = tokens.get('refresh_token')
-                expires_in = tokens.get('expires_in', 1800)
+            try:
+                with urlopen(token_request) as response:
+                    if response.status == 200:
+                        # Success - got tokens
+                        tokens = json.loads(response.read().decode())
+                        access_token = tokens.get('access_token')
+                        refresh_token = tokens.get('refresh_token')
+                        expires_in = tokens.get('expires_in', 1800)
 
-                # Get tenant ID
-                connections_response = requests.get(
-                    'https://api.xero.com/connections',
-                    headers={'Authorization': f'Bearer {access_token}'}
-                )
+                        # Get tenant ID
+                        connections_request = Request(
+                            'https://api.xero.com/connections',
+                            headers={'Authorization': f'Bearer {access_token}'}
+                        )
 
-                tenant_id = None
-                org_name = None
-                if connections_response.status_code == 200:
-                    connections = connections_response.json()
-                    if connections:
-                        tenant_id = connections[0].get('tenantId')
-                        org_name = connections[0].get('tenantName', 'Unknown')
+                        tenant_id = None
+                        org_name = None
 
-                # Store tokens securely (in production, use database or secure storage)
-                # For now, we'll display success message
+                        try:
+                            with urlopen(connections_request) as conn_response:
+                                if conn_response.status == 200:
+                                    connections = json.loads(conn_response.read().decode())
+                                    if connections:
+                                        tenant_id = connections[0].get('tenantId')
+                                        org_name = connections[0].get('tenantName', 'Unknown')
+                        except Exception as e:
+                            # Continue even if we can't get tenant info
+                            print(f"Could not get tenant info: {e}")
 
-                self.send_response(200)
-                self.send_header('Content-Type', 'text/html')
-                self.end_headers()
-                self.wfile.write(f"""
-                <html>
-                    <head>
-                        <title>Xero Authorization Successful</title>
-                        <style>
-                            body {{
-                                font-family: Arial, sans-serif;
-                                padding: 40px;
-                                max-width: 600px;
-                                margin: 0 auto;
-                                background-color: #f8f9fa;
-                            }}
-                            .success-box {{
-                                background: white;
-                                border-radius: 8px;
-                                padding: 30px;
-                                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                            }}
-                            h1 {{ color: #28a745; }}
-                            .info-box {{
-                                background: #e7f3ff;
-                                border-left: 4px solid #0078d4;
-                                padding: 15px;
-                                margin: 20px 0;
-                            }}
-                            .token-info {{
-                                background: #f8f9fa;
-                                padding: 10px;
-                                border-radius: 4px;
-                                font-family: monospace;
-                                word-break: break-all;
-                                margin: 10px 0;
-                            }}
-                            button {{
-                                background: #0078d4;
-                                color: white;
-                                padding: 10px 20px;
-                                border: none;
-                                border-radius: 4px;
-                                cursor: pointer;
-                                margin-top: 20px;
-                            }}
-                        </style>
-                    </head>
-                    <body>
-                        <div class="success-box">
-                            <h1>✅ Xero Authorization Successful!</h1>
-                            <p>Successfully connected to Xero organization: <strong>{org_name or 'Unknown'}</strong></p>
+                        # Store tokens securely (in production, use database or secure storage)
+                        # For now, we'll display success message
 
-                            <div class="info-box">
-                                <h3>Connection Details:</h3>
-                                <p><strong>Tenant ID:</strong> {tenant_id or 'Not retrieved'}</p>
-                                <p><strong>Token expires in:</strong> {expires_in // 60} minutes</p>
-                            </div>
+                        self.send_response(200)
+                        self.send_header('Content-Type', 'text/html')
+                        self.end_headers()
+                        self.wfile.write(f"""
+                        <html>
+                            <head>
+                                <title>Xero Authorization Successful</title>
+                                <style>
+                                    body {{
+                                        font-family: Arial, sans-serif;
+                                        padding: 40px;
+                                        max-width: 600px;
+                                        margin: 0 auto;
+                                        background-color: #f8f9fa;
+                                    }}
+                                    .success-box {{
+                                        background: white;
+                                        border-radius: 8px;
+                                        padding: 30px;
+                                        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                                    }}
+                                    h1 {{ color: #28a745; }}
+                                    .info-box {{
+                                        background: #e7f3ff;
+                                        border-left: 4px solid #0078d4;
+                                        padding: 15px;
+                                        margin: 20px 0;
+                                    }}
+                                    button {{
+                                        background: #0078d4;
+                                        color: white;
+                                        padding: 10px 20px;
+                                        border: none;
+                                        border-radius: 4px;
+                                        cursor: pointer;
+                                        margin-top: 20px;
+                                    }}
+                                </style>
+                            </head>
+                            <body>
+                                <div class="success-box">
+                                    <h1>✅ Xero Authorization Successful!</h1>
+                                    <p>Successfully connected to Xero organization: <strong>{org_name or 'Unknown'}</strong></p>
 
-                            <div class="info-box">
-                                <h3>Next Steps:</h3>
-                                <ol>
-                                    <li>Tokens have been generated successfully</li>
-                                    <li>Configure automatic token storage in your database</li>
-                                    <li>Set up scheduled inventory sync jobs</li>
-                                    <li>Test product fetching from Xero</li>
-                                </ol>
-                            </div>
+                                    <div class="info-box">
+                                        <h3>Connection Details:</h3>
+                                        <p><strong>Tenant ID:</strong> {tenant_id or 'Not retrieved'}</p>
+                                        <p><strong>Token expires in:</strong> {expires_in // 60} minutes</p>
+                                    </div>
 
-                            <p><strong>Important:</strong> In production, these tokens should be securely stored in a database, not displayed.</p>
+                                    <div class="info-box">
+                                        <h3>Next Steps:</h3>
+                                        <ol>
+                                            <li>Tokens have been generated successfully</li>
+                                            <li>Configure automatic token storage in your database</li>
+                                            <li>Set up scheduled inventory sync jobs</li>
+                                            <li>Test product fetching from Xero</li>
+                                        </ol>
+                                    </div>
 
-                            <button onclick="window.location.href='/'">Return to Chatbot</button>
-                        </div>
-                    </body>
-                </html>
-                """.encode())
+                                    <p><strong>Important:</strong> In production, these tokens should be securely stored in a database, not displayed.</p>
 
-                # Log successful connection
-                print(f"Successfully connected to Xero org: {org_name}, Tenant: {tenant_id}")
+                                    <button onclick="window.location.href='/'">Return to Chatbot</button>
+                                </div>
+                            </body>
+                        </html>
+                        """.encode())
 
-            else:
+                        # Log successful connection
+                        print(f"Successfully connected to Xero org: {org_name}, Tenant: {tenant_id}")
+
+            except HTTPError as e:
                 # Token exchange failed
-                error_data = token_response.json() if token_response.content else {}
+                error_data = e.read().decode() if e.fp else ''
                 self.send_response(400)
                 self.send_header('Content-Type', 'text/html')
                 self.end_headers()
@@ -198,8 +206,8 @@ class handler(BaseHTTPRequestHandler):
                     <body style="font-family: Arial, sans-serif; padding: 40px; text-align: center;">
                         <h1 style="color: #dc3545;">Token Exchange Failed</h1>
                         <p>Could not exchange authorization code for access token.</p>
-                        <p>Status: {token_response.status_code}</p>
-                        <p>Error: {json.dumps(error_data)}</p>
+                        <p>Status: {e.code}</p>
+                        <p>Error: {error_data}</p>
                         <a href="/">Return to Chatbot</a>
                     </body>
                 </html>
