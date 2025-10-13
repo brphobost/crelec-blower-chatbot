@@ -11,8 +11,7 @@ import uuid
 import os
 import sys
 
-# Add backend directory to path for imports
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'backend'))
+# Import enhanced calculator from same directory
 from enhanced_calculator import EnhancedBlowerCalculator
 
 # In-memory session storage (in production, use a database)
