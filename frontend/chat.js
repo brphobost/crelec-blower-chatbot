@@ -13,6 +13,10 @@ class BlowerChat {
         // Generate or retrieve session ID
         this.sessionId = this.getSessionId();
 
+        // Track state and data client-side for stateless operation
+        this.state = 'greeting';
+        this.data = {};
+
         // DOM elements
         this.messagesContainer = document.getElementById('chat-messages');
         this.inputField = document.getElementById('chat-input');
@@ -65,11 +69,21 @@ class BlowerChat {
                 body: JSON.stringify({
                     session_id: this.sessionId,
                     message: 'start',
+                    state: this.state,
+                    data: this.data,
                     context: {}
                 })
             });
 
             const data = await response.json();
+
+            // Update state from initial response
+            if (data.state) {
+                this.state = data.state;
+            }
+            if (data.data) {
+                this.data = data.data;
+            }
 
             if (data.message) {
                 this.addMessage('bot', data.message);
@@ -121,6 +135,8 @@ class BlowerChat {
                 body: JSON.stringify({
                     session_id: this.sessionId,
                     message: message,
+                    state: this.state,
+                    data: this.data,
                     context: {}
                 })
             });
@@ -129,6 +145,14 @@ class BlowerChat {
 
             // Remove typing indicator
             this.hideTypingIndicator();
+
+            // Update state and data from response
+            if (data.state) {
+                this.state = data.state;
+            }
+            if (data.data) {
+                this.data = data.data;
+            }
 
             // Add bot response
             this.addMessage('bot', data.message);

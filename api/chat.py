@@ -78,23 +78,39 @@ class handler(BaseHTTPRequestHandler):
         message = data.get('message', '').strip()
         session_id = data.get('session_id')
 
-        # Get or create session
+        # Get state from request (stateless operation)
+        client_state = data.get('state', 'greeting')
+        client_data = data.get('data', {})
+
+        # Get or create session (fallback for development)
         if not session_id or session_id not in sessions:
             session_id = str(uuid.uuid4())
             sessions[session_id] = {
-                'state': 'greeting',
-                'data': {},
+                'state': client_state,
+                'data': client_data,
                 'conversation': []
             }
 
         session = sessions[session_id]
-        response = {'session_id': session_id}
+
+        # Override with client state if provided (for stateless operation)
+        if client_state:
+            session['state'] = client_state
+        if client_data:
+            session['data'].update(client_data)
+
+        response = {
+            'session_id': session_id,
+            'state': session['state'],
+            'data': session['data']
+        }
 
         # Add user message to conversation history
         session['conversation'].append({'role': 'user', 'message': message})
 
         # Handle conversation states
-        if session['state'] == 'greeting':
+        # Special handling for initial message
+        if message.lower() == 'start' or session['state'] == 'greeting':
             response['message'] = (
                 "👋 Hi! I'm the Crelec Blower Selection Assistant.\\n\\n"
                 "I'll help you find the perfect blower for your application. "
@@ -105,8 +121,10 @@ class handler(BaseHTTPRequestHandler):
                 "Please type 'compression' or 'vacuum':"
             )
             session['state'] = 'operation_type'
+            response['state'] = 'operation_type'
+            response['data'] = session['data']
 
-        elif session['state'] == 'operation_type':
+        elif session['state'] == 'operation_type' or ('comp' in message.lower() or 'vac' in message.lower() or 'blow' in message.lower() or 'suc' in message.lower()):
             msg_lower = message.lower().strip()
             if 'comp' in msg_lower or 'blow' in msg_lower or 'aerat' in msg_lower:
                 session['data']['operation'] = 'compression'
