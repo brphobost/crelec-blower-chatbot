@@ -279,11 +279,11 @@ class EnhancedBlowerCalculator:
         # 6. ALTITUDE CORRECTIONS
         if altitude > 0:
             # Pressure correction: +1% per 100m
-            pressure_correction = 1 + (altitude / 10000)
+            pressure_correction = 1 + (altitude / 100 / 100)  # altitude/100 gives percentage
             breakdown.altitude_corrected_pressure = breakdown.total_pressure * pressure_correction
 
             # Flow correction: slightly less effect
-            flow_correction = 1 + (altitude / 12000)
+            flow_correction = 1 + (altitude / 120 / 100)  # slightly less than pressure correction
             breakdown.corrected_airflow_m3_hr = breakdown.base_airflow_m3_hr * flow_correction
 
             breakdown.altitude_correction = pressure_correction

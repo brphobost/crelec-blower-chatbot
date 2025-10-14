@@ -158,10 +158,19 @@ class handler(BaseHTTPRequestHandler):
 
         elif session['state'] == 'altitude':
             session['data']['altitude_text'] = message
-            try:
-                altitude = float(re.findall(r'\d+', message)[0]) if re.findall(r'\d+', message) else 500
-            except:
-                altitude = 500
+            msg_lower = message.lower().strip()
+
+            # Check for sea level or coastal first
+            if 'sea' in msg_lower or 'coast' in msg_lower or msg_lower == '0':
+                altitude = 0
+            else:
+                try:
+                    # Try to extract a number from the message
+                    numbers = re.findall(r'\d+', message)
+                    altitude = float(numbers[0]) if numbers else 500
+                except:
+                    altitude = 500
+
             session['data']['altitude'] = altitude
 
             response['message'] = (
@@ -243,8 +252,28 @@ class handler(BaseHTTPRequestHandler):
                 response['message'] = (
                     f"✅ {config_msg} configured.\\n\\n"
                     "**TANK DIMENSIONS**\\n\\n"
+                    "```\\n"
+                    "     Length (L)\\n"
+                    "   ←─────────────→\\n"
+                    "   ┌─────────────┐ ↑\\n"
+                    "   │             │ │ Width (W)\\n"
+                    "   │    TANK     │ │\\n"
+                    "   │   TOP VIEW  │ ↓\\n"
+                    "   └─────────────┘\\n"
+                    "\\n"
+                    "   Water Level\\n"
+                    "   ▼\\n"
+                    "   ┌─────────────┐\\n"
+                    "   │≈≈≈≈≈≈≈≈≈≈≈≈≈│ ← Surface\\n"
+                    "   │             │ ↑\\n"
+                    "   │    WATER    │ │ Depth (D)\\n"
+                    "   │             │ ↓\\n"
+                    "   └─────────────┘ ← Bottom\\n"
+                    "    SIDE VIEW\\n"
+                    "```\\n\\n"
                     "Please provide tank size in meters:\\n"
-                    "• Length × Width × Depth (e.g., '6 3 2')\\n\\n"
+                    "• **Format**: Length × Width × Depth\\n"
+                    "• **Example**: 6 3 2 (or 6×3×2)\\n\\n"
                     "Tank dimensions:"
                 )
                 session['state'] = 'dimensions'
@@ -429,6 +458,17 @@ class handler(BaseHTTPRequestHandler):
                 f"• Diffuser loss: {breakdown['diffuser_loss']:.0f} mbar\\n"
                 f"• Subtotal: {breakdown['subtotal_pressure']:.0f} mbar\\n"
                 f"• Safety margin ({(breakdown['safety_factor']-1)*100:.0f}%): {breakdown['safety_margin']:.0f} mbar\\n"
+            )
+
+            # Add altitude correction if applicable
+            altitude = session['data'].get('altitude', 0)
+            if altitude > 0:
+                altitude_increase = (breakdown['altitude_correction'] - 1) * 100
+                response['message'] += (
+                    f"• Altitude correction ({altitude}m): +{altitude_increase:.1f}%\\n"
+                )
+
+            response['message'] += (
                 "───────────────────────────\\n"
                 f"**Total Required: {breakdown['final_pressure']:.0f} mbar**\\n"
             )
