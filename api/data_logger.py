@@ -11,10 +11,21 @@ from pathlib import Path
 class DataLogger:
     """Flexible logger that can write to CSV, JSON, or send to webhooks"""
 
-    def __init__(self, log_dir="logs"):
+    def __init__(self, log_dir=None):
         """Initialize the logger with a directory for storing logs"""
+        # Use /tmp for Vercel serverless functions, or local logs directory
+        if log_dir is None:
+            if os.environ.get('VERCEL'):
+                log_dir = "/tmp"
+            else:
+                log_dir = "logs"
+
         self.log_dir = Path(log_dir)
-        self.log_dir.mkdir(exist_ok=True)
+        try:
+            self.log_dir.mkdir(exist_ok=True)
+        except:
+            # If we can't create the directory, use /tmp
+            self.log_dir = Path("/tmp")
 
         # CSV file path
         self.csv_file = self.log_dir / "inquiries.csv"

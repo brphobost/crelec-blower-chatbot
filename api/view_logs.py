@@ -4,21 +4,54 @@ Simple API endpoint to view logged inquiries
 
 from http.server import BaseHTTPRequestHandler
 import json
-from data_logger import data_logger
+
+try:
+    from data_logger import data_logger
+except ImportError:
+    # Create a new instance if import fails
+    import sys
+    import os
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from data_logger import DataLogger
+    data_logger = DataLogger()
 
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
         """Handle GET request to view logs"""
+
+        try:
+            # Get all inquiries
+            inquiries = data_logger.get_all_inquiries()
+            stats = data_logger.get_summary_stats()
+        except Exception as e:
+            # If there's an error, return a simple error page
+            self.send_response(200)
+            self.send_header('Content-type', 'text/html; charset=utf-8')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+
+            error_html = f"""
+            <!DOCTYPE html>
+            <html>
+            <head><title>Inquiry Logs</title></head>
+            <body style="font-family: Arial; padding: 40px;">
+                <h1 style="color: #0066cc;">Crelec Inquiry Logs</h1>
+                <div style="background: #f0f0f0; padding: 20px; border-radius: 8px;">
+                    <h2>No Data Yet</h2>
+                    <p>No inquiries have been logged yet. Complete a chatbot inquiry to see data here.</p>
+                    <p style="color: #666; font-size: 0.9em;">Note: Data is stored temporarily on Vercel and may be cleared periodically.</p>
+                </div>
+            </body>
+            </html>
+            """
+            self.wfile.write(error_html.encode())
+            return
 
         # Set response headers
         self.send_response(200)
         self.send_header('Content-type', 'text/html; charset=utf-8')
         self.send_header('Access-Control-Allow-Origin', '*')
         self.end_headers()
-
-        # Get all inquiries
-        inquiries = data_logger.get_all_inquiries()
-        stats = data_logger.get_summary_stats()
 
         # Create HTML response
         html = f"""

@@ -3,9 +3,18 @@ Export logs as CSV for download
 """
 
 from http.server import BaseHTTPRequestHandler
-from data_logger import data_logger
 import csv
 from io import StringIO
+
+try:
+    from data_logger import data_logger
+except ImportError:
+    # Create a new instance if import fails
+    import sys
+    import os
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from data_logger import DataLogger
+    data_logger = DataLogger()
 
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
