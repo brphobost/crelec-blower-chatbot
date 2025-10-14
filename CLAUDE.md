@@ -3,7 +3,7 @@
 ## Project Overview
 An intelligent chatbot system for Crelec S.A. that helps end-users select the right blower for their applications through a conversational interface. The system features **professional-grade engineering calculations** including pipe losses, diffuser selection, environment factors, and multiple tank configurations.
 
-## Current Version: v2.1.0 (October 2024)
+## Current Version: v2.1.1 (October 2024)
 - **Live URL**: https://blower-chatbot.vercel.app
 - **Repository**: https://github.com/brphobost/crelec-blower-chatbot
 - **Deployment**: Vercel (auto-deploys from GitHub)
@@ -212,6 +212,17 @@ git push origin master
 
 ## 📈 Recent Updates & Changelog
 
+### v2.1.1 (Oct 14, 2024) - Bug Fixes & UI Improvements
+**Environment Factor & Calculation Fixes**
+- **FIXED**: Environment factor now always displayed in calculation breakdown
+- **FIXED**: Separated safety factor (10%) from environment factor (0-25%)
+- **FIXED**: Safety margin calculation now correctly based on subtotal pressure
+- **IMPROVED**: Reduced base safety factors to more reasonable 10-15%
+- **IMPROVED**: Added numbered selection for diffuser types (1-5)
+- **UI**: Increased chat message width by 20% for better readability
+- **UI**: Reduced tank dimensions image to 75% size
+- **UI**: Environment factor now shows even when "normal" (no adjustment)
+
 ### v2.1.0 (Oct 14, 2024) - MAJOR ENHANCEMENT
 **Expanded Applications & Environment Factors**
 - **NEW**: 12 application types (up from 3) matching Crelec form
@@ -344,5 +355,5 @@ When making changes, update version in:
 
 ---
 
-*Last Updated: October 14, 2024 - v2.1.0*
+*Last Updated: October 14, 2024 - v2.1.1*
 *Document maintained by Liberlocus Development Team*

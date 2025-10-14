@@ -589,13 +589,19 @@ class handler(BaseHTTPRequestHandler):
                 f"• Safety margin ({(breakdown['safety_factor']-1)*100:.0f}%): {breakdown['safety_margin']:.0f} mbar\\n"
             )
 
-            # Add environment factor if not normal
+            # Add environment factor (always show it)
             env_factor = session['data'].get('environment_factor', 1.0)
+            env_type = session['data'].get('environment', 'normal')
+            env_adjustment_mbar = breakdown.get('environment_adjustment', 0)
+
             if env_factor > 1.0:
                 env_increase = (env_factor - 1) * 100
-                env_type = session['data'].get('environment', 'normal')
                 response['message'] += (
-                    f"• Environment factor ({env_type}): +{env_increase:.0f}% ({breakdown.get('environment_adjustment', 0):.0f} mbar)\\n"
+                    f"• Environment factor ({env_type}): +{env_increase:.0f}% ({env_adjustment_mbar:.0f} mbar)\\n"
+                )
+            else:
+                response['message'] += (
+                    f"• Environment factor ({env_type}): No adjustment (0 mbar)\\n"
                 )
 
             # Add altitude correction if applicable
