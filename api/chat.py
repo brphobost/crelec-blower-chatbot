@@ -18,14 +18,15 @@ except ImportError:
             # Simple fallback calculation
             airflow = kwargs.get('tank_length', 6) * kwargs.get('tank_width', 3) * 0.25 * 60
             altitude = kwargs.get('altitude', 0)
+            environment_factor = kwargs.get('environment_factor', 1.0)
 
             # Calculate altitude correction (1% per 100m)
             altitude_correction = 1 + (altitude / 100 / 100) if altitude > 0 else 1.0
 
             # Base pressure calculation
             base_pressure = kwargs.get('tank_depth', 2) * 100 * 1.3 + 250
-            # Apply altitude correction
-            pressure = base_pressure * altitude_correction
+            # Apply altitude and environment corrections
+            pressure = base_pressure * altitude_correction * environment_factor
 
             # Corrected airflow (slightly less effect than pressure)
             flow_correction = 1 + (altitude / 120 / 100) if altitude > 0 else 1.0
@@ -52,6 +53,7 @@ except ImportError:
                     'final_pressure': pressure,
                     'pipe_velocity': 10,
                     'altitude_correction': altitude_correction,
+                    'environment_factor': environment_factor,
                     'safety_factor': 1.2,
                     'specific_gravity': 1.05
                 },
@@ -188,41 +190,136 @@ class handler(BaseHTTPRequestHandler):
 
             response['message'] = (
                 f"✅ Location confirmed: {altitude}m altitude\\n\\n"
-                "What's your application?\\n\\n"
-                "• **Waste Water** Treatment (aeration tanks)\\n"
-                "• **Fish** Farming/Aquaculture\\n"
-                "• **Industrial** Process (general)\\n\\n"
-                "Please type 'waste water', 'fish', or 'industrial':"
+                "**Select your application:**\\n\\n"
+                "1. **Waste Water** Treatment\\n"
+                "2. **Fertiliser** Production\\n"
+                "3. **Dental** Aspiration\\n"
+                "4. **Sauna** Systems\\n"
+                "5. **Aquaponics**/Fish Farming\\n"
+                "6. **Bottling** Lines\\n"
+                "7. **Pneumatic** Conveying\\n"
+                "8. **Plastic** Mold Processing\\n"
+                "9. **Metal** Treatment Baths\\n"
+                "10. **Gas/Air** Circulation\\n"
+                "11. **Materials** Handling\\n"
+                "12. **Other** (please specify)\\n\\n"
+                "Type a number (1-12) or application name:"
             )
             session['state'] = 'application'
 
         elif session['state'] == 'application':
             msg_lower = message.lower().strip()
-            if 'waste' in msg_lower or 'water treat' in msg_lower or 'aerat' in msg_lower:
+
+            # Handle numbered inputs
+            app_map = {
+                '1': ('waste_water', 'Waste Water Treatment'),
+                '2': ('fertiliser', 'Fertiliser Production'),
+                '3': ('dental', 'Dental Aspiration'),
+                '4': ('sauna', 'Sauna Systems'),
+                '5': ('aquaponics', 'Aquaponics/Fish Farming'),
+                '6': ('bottling', 'Bottling Lines'),
+                '7': ('pneumatic', 'Pneumatic Conveying'),
+                '8': ('plastic', 'Plastic Mold Processing'),
+                '9': ('metal_treatment', 'Metal Treatment Baths'),
+                '10': ('gas_circulation', 'Gas/Air Circulation'),
+                '11': ('materials', 'Materials Handling'),
+                '12': ('other', 'Other Application')
+            }
+
+            # Check if numeric input
+            if message.strip() in app_map:
+                session['data']['application'], app_msg = app_map[message.strip()]
+            # Check text inputs
+            elif 'waste' in msg_lower or 'water treat' in msg_lower:
                 session['data']['application'] = 'waste_water'
                 app_msg = "Waste Water Treatment"
-            elif 'fish' in msg_lower or 'aqua' in msg_lower or 'hatch' in msg_lower:
-                session['data']['application'] = 'fish_hatchery'
-                app_msg = "Fish Farming/Aquaculture"
-            elif 'industr' in msg_lower or 'process' in msg_lower or 'general' in msg_lower:
-                session['data']['application'] = 'industrial'
-                app_msg = "Industrial Process"
+            elif 'fertil' in msg_lower:
+                session['data']['application'] = 'fertiliser'
+                app_msg = "Fertiliser Production"
+            elif 'dental' in msg_lower or 'aspir' in msg_lower:
+                session['data']['application'] = 'dental'
+                app_msg = "Dental Aspiration"
+            elif 'sauna' in msg_lower:
+                session['data']['application'] = 'sauna'
+                app_msg = "Sauna Systems"
+            elif 'fish' in msg_lower or 'aqua' in msg_lower or 'aquaponic' in msg_lower:
+                session['data']['application'] = 'aquaponics'
+                app_msg = "Aquaponics/Fish Farming"
+            elif 'bottl' in msg_lower:
+                session['data']['application'] = 'bottling'
+                app_msg = "Bottling Lines"
+            elif 'pneumatic' in msg_lower or 'convey' in msg_lower:
+                session['data']['application'] = 'pneumatic'
+                app_msg = "Pneumatic Conveying"
+            elif 'plastic' in msg_lower or 'mold' in msg_lower or 'mould' in msg_lower:
+                session['data']['application'] = 'plastic'
+                app_msg = "Plastic Mold Processing"
+            elif 'metal' in msg_lower or 'treatment' in msg_lower:
+                session['data']['application'] = 'metal_treatment'
+                app_msg = "Metal Treatment Baths"
+            elif 'gas' in msg_lower or 'circulation' in msg_lower:
+                session['data']['application'] = 'gas_circulation'
+                app_msg = "Gas/Air Circulation"
+            elif 'material' in msg_lower or 'handling' in msg_lower:
+                session['data']['application'] = 'materials'
+                app_msg = "Materials Handling"
             else:
-                response['message'] = (
-                    "I didn't understand that. Please type:\\n"
-                    "• 'waste water' for treatment plants\\n"
-                    "• 'fish' for aquaculture\\n"
-                    "• 'industrial' for general processes"
-                )
-                self.send_response(200)
-                self.send_header('Content-Type', 'application/json')
-                self.send_header('Access-Control-Allow-Origin', '*')
-                self.end_headers()
-                self.wfile.write(json.dumps(response).encode())
-                return
+                # Treat any other input as "Other" application
+                session['data']['application'] = 'other'
+                session['data']['application_detail'] = message
+                app_msg = f"Other: {message}"
 
             response['message'] = (
                 f"✅ {app_msg} selected.\\n\\n"
+                "**Operating Environment:**\\n\\n"
+                "What type of environment will the blower operate in?\\n\\n"
+                "• **Normal** - Standard indoor conditions\\n"
+                "• **Wet/Humid** - High moisture areas\\n"
+                "• **Dusty** - Particulate-laden air\\n"
+                "• **Coastal/Marine** - Salt air exposure\\n"
+                "• **Gas/Chemical** - Corrosive atmospheres\\n"
+                "• **Extreme Climate** - Very hot/cold conditions\\n\\n"
+                "Type your environment condition:"
+            )
+            session['state'] = 'environment'
+
+        elif session['state'] == 'environment':
+            msg_lower = message.lower().strip()
+
+            # Process environment selection
+            if 'normal' in msg_lower or 'standard' in msg_lower or 'indoor' in msg_lower:
+                session['data']['environment'] = 'normal'
+                env_msg = "Normal conditions"
+                env_factor = 1.0
+            elif 'wet' in msg_lower or 'humid' in msg_lower or 'moisture' in msg_lower:
+                session['data']['environment'] = 'wet'
+                env_msg = "Wet/Humid environment"
+                env_factor = 1.1  # 10% safety increase
+            elif 'dust' in msg_lower or 'particulate' in msg_lower:
+                session['data']['environment'] = 'dusty'
+                env_msg = "Dusty environment"
+                env_factor = 1.15  # 15% safety increase
+            elif 'coast' in msg_lower or 'marine' in msg_lower or 'salt' in msg_lower or 'sea' in msg_lower:
+                session['data']['environment'] = 'coastal'
+                env_msg = "Coastal/Marine environment"
+                env_factor = 1.2  # 20% safety increase
+            elif 'gas' in msg_lower or 'chemical' in msg_lower or 'corrosive' in msg_lower:
+                session['data']['environment'] = 'gas'
+                env_msg = "Gas/Chemical environment"
+                env_factor = 1.25  # 25% safety increase
+            elif 'extreme' in msg_lower or 'climate' in msg_lower or 'hot' in msg_lower or 'cold' in msg_lower:
+                session['data']['environment'] = 'climate'
+                env_msg = "Extreme climate"
+                env_factor = 1.15  # 15% safety increase
+            else:
+                session['data']['environment'] = 'normal'
+                env_msg = "Normal conditions (default)"
+                env_factor = 1.0
+
+            session['data']['environment_factor'] = env_factor
+
+            response['message'] = (
+                f"✅ {env_msg} selected.\\n\\n"
                 "**TANK CONFIGURATION**\\n\\n"
                 "How many tanks do you have? (1-10)\\n"
                 "If you have multiple tanks, are they in 'series' or 'parallel'?\\n\\n"
@@ -426,7 +523,8 @@ class handler(BaseHTTPRequestHandler):
                 pipe_diameter=session['data'].get('pipe_diameter'),
                 pipe_length=session['data'].get('pipe_length'),
                 num_bends=session['data'].get('num_bends'),
-                diffuser_type=selected_type
+                diffuser_type=selected_type,
+                environment_factor=session['data'].get('environment_factor', 1.0)
             )
 
             # Format the detailed response
@@ -461,6 +559,15 @@ class handler(BaseHTTPRequestHandler):
                 altitude_increase = (breakdown['altitude_correction'] - 1) * 100
                 response['message'] += (
                     f"• Altitude correction ({altitude}m): +{altitude_increase:.1f}%\\n"
+                )
+
+            # Add environment factor if not normal
+            env_factor = session['data'].get('environment_factor', 1.0)
+            if env_factor > 1.0:
+                env_increase = (env_factor - 1) * 100
+                env_type = session['data'].get('environment', 'normal')
+                response['message'] += (
+                    f"• Environment factor ({env_type}): +{env_increase:.0f}%\\n"
                 )
 
             response['message'] += (
