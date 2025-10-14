@@ -124,7 +124,7 @@ class handler(BaseHTTPRequestHandler):
             response['state'] = 'operation_type'
             response['data'] = session['data']
 
-        elif session['state'] == 'operation_type' or ('comp' in message.lower() or 'vac' in message.lower() or 'blow' in message.lower() or 'suc' in message.lower()):
+        elif session['state'] == 'operation_type':
             msg_lower = message.lower().strip()
             if 'comp' in msg_lower or 'blow' in msg_lower or 'aerat' in msg_lower:
                 session['data']['operation'] = 'compression'
@@ -542,6 +542,10 @@ class handler(BaseHTTPRequestHandler):
                 session['state'] = 'operation_type'
             else:
                 response['message'] = "Thank you for using Crelec Blower Selection. Type 'restart' for a new calculation."
+
+        # Update response with latest state and data before sending
+        response['state'] = session['state']
+        response['data'] = session['data']
 
         # Send response with CORS headers
         self.send_response(200)
