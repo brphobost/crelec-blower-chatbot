@@ -10,11 +10,13 @@ import re
 import uuid
 import urllib.request
 import urllib.parse
+import os
 
+# Try local config first, fallback to environment variable
 try:
     from config import GOOGLE_SHEETS_WEBHOOK
 except ImportError:
-    GOOGLE_SHEETS_WEBHOOK = ""
+    GOOGLE_SHEETS_WEBHOOK = os.environ.get('GOOGLE_SHEETS_WEBHOOK', '')
 
 try:
     from data_logger import log_inquiry as log_to_file
