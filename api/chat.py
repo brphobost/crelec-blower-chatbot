@@ -27,9 +27,14 @@ except ImportError as e:
             altitude_correction = 1 + (altitude / 100 / 100) if altitude > 0 else 1.0
 
             # Base pressure calculation
-            base_pressure = kwargs.get('tank_depth', 2) * 100 * 1.3 + 250
-            # Apply altitude and environment corrections
-            pressure = base_pressure * altitude_correction * environment_factor
+            base_pressure = kwargs.get('tank_depth', 2) * 100 + 250 + 15 + 10  # static + diffuser + pipes
+            safety_factor = 1.10  # 10% base safety
+            safety_margin = base_pressure * (safety_factor - 1)
+            environment_adjustment = base_pressure * (environment_factor - 1) if environment_factor > 1.0 else 0
+
+            # Apply all corrections
+            total_pressure = base_pressure + safety_margin + environment_adjustment
+            pressure = total_pressure * altitude_correction
 
             # Corrected airflow (slightly less effect than pressure)
             flow_correction = 1 + (altitude / 120 / 100) if altitude > 0 else 1.0
@@ -50,14 +55,15 @@ except ImportError as e:
                     'pipe_friction': 15,
                     'fitting_losses': 10,
                     'diffuser_loss': 250,
-                    'subtotal_pressure': base_pressure - 100,
-                    'safety_margin': 100,
-                    'total_pressure': base_pressure,
+                    'subtotal_pressure': base_pressure,
+                    'safety_margin': safety_margin,
+                    'environment_adjustment': environment_adjustment,
+                    'total_pressure': total_pressure,
                     'final_pressure': pressure,
                     'pipe_velocity': 10,
                     'altitude_correction': altitude_correction,
                     'environment_factor': environment_factor,
-                    'safety_factor': 1.2,
+                    'safety_factor': safety_factor,
                     'specific_gravity': 1.05
                 },
                 'tank_info': {
@@ -554,7 +560,7 @@ class handler(BaseHTTPRequestHandler):
                 pipe_length=session['data'].get('pipe_length'),
                 num_bends=session['data'].get('num_bends'),
                 diffuser_type=selected_type,
-                safety_factor=session['data'].get('environment_factor', 1.0)  # Pass as safety_factor
+                environment_factor=session['data'].get('environment_factor', 1.0)
             )
 
             # Format the detailed response
@@ -583,21 +589,21 @@ class handler(BaseHTTPRequestHandler):
                 f"• Safety margin ({(breakdown['safety_factor']-1)*100:.0f}%): {breakdown['safety_margin']:.0f} mbar\\n"
             )
 
-            # Add altitude correction if applicable
-            altitude = session['data'].get('altitude', 0)
-            if altitude > 0:
-                altitude_increase = (breakdown['altitude_correction'] - 1) * 100
-                response['message'] += (
-                    f"• Altitude correction ({altitude}m): +{altitude_increase:.1f}%\\n"
-                )
-
             # Add environment factor if not normal
             env_factor = session['data'].get('environment_factor', 1.0)
             if env_factor > 1.0:
                 env_increase = (env_factor - 1) * 100
                 env_type = session['data'].get('environment', 'normal')
                 response['message'] += (
-                    f"• Environment factor ({env_type}): +{env_increase:.0f}%\\n"
+                    f"• Environment factor ({env_type}): +{env_increase:.0f}% ({breakdown.get('environment_adjustment', 0):.0f} mbar)\\n"
+                )
+
+            # Add altitude correction if applicable
+            altitude = session['data'].get('altitude', 0)
+            if altitude > 0:
+                altitude_increase = (breakdown['altitude_correction'] - 1) * 100
+                response['message'] += (
+                    f"• Altitude correction ({altitude}m): +{altitude_increase:.1f}%\\n"
                 )
 
             response['message'] += (

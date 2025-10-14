@@ -39,12 +39,14 @@ class CalculationBreakdown:
     diffuser_loss: float
     subtotal_pressure: float
     safety_margin: float
+    environment_adjustment: float
     total_pressure: float
     altitude_corrected_pressure: float
 
     # Factors applied
     altitude_correction: float
     safety_factor: float
+    environment_factor: float
     specific_gravity: float
 
     # Additional info
@@ -91,19 +93,19 @@ class EnhancedBlowerCalculator:
         self.app_params = {
             'waste_water': {
                 'airflow_factor': 0.25,  # m³/min per m²
-                'safety_factor': 1.2,
+                'safety_factor': 1.10,  # 10% base safety factor
                 'specific_gravity': 1.05,
                 'default_diffuser': 'fine'
             },
             'fish_hatchery': {
                 'airflow_factor': 0.002,  # m³/min per m²
-                'safety_factor': 1.5,
+                'safety_factor': 1.15,  # 15% base safety factor
                 'specific_gravity': 1.0,
                 'default_diffuser': 'coarse'
             },
             'industrial': {
                 'air_changes_per_hour': 2,
-                'safety_factor': 1.3,
+                'safety_factor': 1.10,  # 10% base safety factor
                 'specific_gravity': 1.0,
                 'default_diffuser': 'disc'
             }
@@ -134,7 +136,8 @@ class EnhancedBlowerCalculator:
                   diffuser_depth: Optional[float] = None,
 
                   # Optional overrides
-                  safety_factor: Optional[float] = None) -> Dict:
+                  safety_factor: Optional[float] = None,
+                  environment_factor: Optional[float] = None) -> Dict:
         """
         Calculate blower requirements with detailed breakdown
 
@@ -153,10 +156,12 @@ class EnhancedBlowerCalculator:
             diffuser_loss=0,
             subtotal_pressure=0,
             safety_margin=0,
+            environment_adjustment=0,
             total_pressure=0,
             altitude_corrected_pressure=0,
             altitude_correction=1.0,
             safety_factor=1.0,
+            environment_factor=1.0,
             specific_gravity=1.0,
             pipe_velocity=0,
             messages=[],
@@ -170,7 +175,10 @@ class EnhancedBlowerCalculator:
         if safety_factor:
             breakdown.safety_factor = safety_factor
         else:
-            breakdown.safety_factor = app_data.get('safety_factor', 1.2)
+            breakdown.safety_factor = app_data.get('safety_factor', 1.10)
+
+        # Set environment factor
+        breakdown.environment_factor = environment_factor if environment_factor else 1.0
 
         breakdown.specific_gravity = app_data.get('specific_gravity', 1.0)
 
@@ -272,9 +280,17 @@ class EnhancedBlowerCalculator:
             breakdown.subtotal_pressure *= num_tanks
             breakdown.messages.append(f"Series tanks: Pressure × {num_tanks}")
 
-        # Apply safety factor
+        # Apply safety factor (base safety margin)
         breakdown.safety_margin = breakdown.subtotal_pressure * (breakdown.safety_factor - 1)
-        breakdown.total_pressure = breakdown.subtotal_pressure + breakdown.safety_margin
+
+        # Apply environment factor if specified
+        if breakdown.environment_factor > 1.0:
+            breakdown.environment_adjustment = breakdown.subtotal_pressure * (breakdown.environment_factor - 1)
+        else:
+            breakdown.environment_adjustment = 0
+
+        # Calculate total pressure
+        breakdown.total_pressure = breakdown.subtotal_pressure + breakdown.safety_margin + breakdown.environment_adjustment
 
         # 6. ALTITUDE CORRECTIONS
         if altitude > 0:
@@ -324,6 +340,8 @@ class EnhancedBlowerCalculator:
                 'pipe_velocity': round(breakdown.pipe_velocity, 1) if breakdown.pipe_velocity else None,
                 'altitude_correction': round(breakdown.altitude_correction, 3),
                 'safety_factor': breakdown.safety_factor,
+                'environment_factor': breakdown.environment_factor,
+                'environment_adjustment': round(breakdown.environment_adjustment, 1),
                 'specific_gravity': breakdown.specific_gravity
             },
             'tank_info': {
