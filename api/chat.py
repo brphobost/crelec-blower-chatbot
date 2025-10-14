@@ -273,21 +273,34 @@ class handler(BaseHTTPRequestHandler):
                 f"✅ {app_msg} selected.\\n\\n"
                 "**Operating Environment:**\\n\\n"
                 "What type of environment will the blower operate in?\\n\\n"
-                "• **Normal** - Standard indoor conditions\\n"
-                "• **Wet/Humid** - High moisture areas\\n"
-                "• **Dusty** - Particulate-laden air\\n"
-                "• **Coastal/Marine** - Salt air exposure\\n"
-                "• **Gas/Chemical** - Corrosive atmospheres\\n"
-                "• **Extreme Climate** - Very hot/cold conditions\\n\\n"
-                "Type your environment condition:"
+                "1. **Normal** - Standard indoor conditions\\n"
+                "2. **Wet/Humid** - High moisture areas\\n"
+                "3. **Dusty** - Particulate-laden air\\n"
+                "4. **Coastal/Marine** - Salt air exposure\\n"
+                "5. **Gas/Chemical** - Corrosive atmospheres\\n"
+                "6. **Extreme Climate** - Very hot/cold conditions\\n\\n"
+                "Type a number (1-6) or environment name:"
             )
             session['state'] = 'environment'
 
         elif session['state'] == 'environment':
             msg_lower = message.lower().strip()
 
-            # Process environment selection
-            if 'normal' in msg_lower or 'standard' in msg_lower or 'indoor' in msg_lower:
+            # Handle numbered inputs
+            env_map = {
+                '1': ('normal', 'Normal conditions', 1.0),
+                '2': ('wet', 'Wet/Humid environment', 1.1),
+                '3': ('dusty', 'Dusty environment', 1.15),
+                '4': ('coastal', 'Coastal/Marine environment', 1.2),
+                '5': ('gas', 'Gas/Chemical environment', 1.25),
+                '6': ('climate', 'Extreme climate', 1.15)
+            }
+
+            # Check if numeric input
+            if message.strip() in env_map:
+                session['data']['environment'], env_msg, env_factor = env_map[message.strip()]
+            # Process text environment selection
+            elif 'normal' in msg_lower or 'standard' in msg_lower or 'indoor' in msg_lower:
                 session['data']['environment'] = 'normal'
                 env_msg = "Normal conditions"
                 env_factor = 1.0
