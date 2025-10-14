@@ -512,12 +512,39 @@ class handler(BaseHTTPRequestHandler):
             # Email validation
             if '@' in message and '.' in message:
                 session['data']['email'] = message
+
+                # Generate quote ID
+                import datetime
+                quote_id = f"Q{datetime.datetime.now().strftime('%Y%m%d')}-{uuid.uuid4().hex[:8].upper()}"
+
+                # Prepare email data for frontend
+                email_data = {
+                    'quote_id': quote_id,
+                    'customer_data': {
+                        'email': message,
+                        'date': datetime.datetime.now().strftime('%Y-%m-%d'),
+                        'time': datetime.datetime.now().strftime('%H:%M')
+                    },
+                    'calculation': {
+                        'results': session['data'].get('results', {}),
+                        'tank_dimensions': f"{session['data'].get('length', 0)}m × {session['data'].get('width', 0)}m × {session['data'].get('height', 0)}m",
+                        'application': session['data'].get('application', 'industrial'),
+                        'altitude': session['data'].get('altitude', 0),
+                        'num_tanks': session['data'].get('num_tanks', 1),
+                        'tank_config': session['data'].get('tank_config', 'single')
+                    },
+                    'products': []  # Would normally fetch from product database
+                }
+
+                # Add flags to trigger frontend email handling
+                response['send_email'] = True
+                response['email_data'] = email_data
                 response['message'] = (
-                    "✅ Thank you! Your quote has been sent to " + message + "\\n\\n"
+                    "✅ Thank you! Your quote is being generated...\\n\\n"
                     "You'll receive:\\n"
                     "• Detailed PDF quote\\n"
                     "• Product recommendations\\n"
-                    "• Technical datasheets\\n\\n"
+                    "• Technical specifications\\n\\n"
                     "A Crelec representative will contact you soon.\\n\\n"
                     "Type 'restart' for a new calculation."
                 )
