@@ -3,14 +3,14 @@
 ## Project Overview
 An intelligent chatbot system for Crelec S.A. that helps end-users select the right blower for their applications through a conversational interface. The system features **professional-grade engineering calculations** including pipe losses, diffuser selection, environment factors, and multiple tank configurations.
 
-## Current Version: v2.1.1 (October 2024)
+## Current Version: v2.1.2 (October 2024)
 - **Live URL**: https://blower-chatbot.vercel.app
 - **Repository**: https://github.com/brphobost/crelec-blower-chatbot
 - **Deployment**: Vercel (auto-deploys from GitHub)
 - **Status**: Production-ready with professional calculations
 - **Achievement**: Quote generation reduced from 30 min to 2 min ✅
 
-## ✅ Current Features (v2.1.0)
+## ✅ Current Features (v2.1.2)
 
 ### 1. **Professional Calculation Engine**
 - **Enhanced Calculator Module** (`enhanced_calculator.py`)
@@ -81,7 +81,14 @@ Professional data collection sequence:
 - 30-day validity period
 - Contact information
 
-### 8. **State Management & Architecture**
+### 8. **Data Logging & Analytics** (v2.1.2)
+- **Google Sheets Integration** - Automatic logging with dynamic columns
+- **Local CSV/JSON logging** - Fallback data storage
+- **Web-based log viewer** - Real-time inquiry monitoring
+- **CSV export endpoint** - Download all data anytime
+- **Auto-adapting columns** - No maintenance when fields change
+
+### 9. **State Management & Architecture**
 - **Stateless operation** for Vercel serverless functions
 - **Client-side state tracking** for conversation continuity
 - **Fallback calculator** for resilience
@@ -166,6 +173,11 @@ blower-chatbot/
 ├── api/                          # Vercel serverless functions
 │   ├── chat.py                  # Main chat handler (PRODUCTION)
 │   ├── enhanced_calculator.py   # Calculation engine
+│   ├── data_logger.py           # CSV/JSON logging system
+│   ├── view_logs.py             # Web viewer for logs
+│   ├── export_logs.py           # CSV export endpoint
+│   ├── config.py                # Configuration (gitignored)
+│   ├── config.example.py        # Config template
 │   └── send_email.py            # Email handling
 ├── backend/                      # Development modules
 │   ├── app.py                   # Local dev server
@@ -180,6 +192,9 @@ blower-chatbot/
 │           └── tank-dimensions.png  # Visual guides
 ├── CLAUDE.md                     # This documentation
 ├── CALCULATIONS.md               # Formula documentation
+├── DYNAMIC_SHEETS_SETUP.md       # Google Sheets integration guide
+├── GOOGLE_SHEETS_SETUP.md        # Alternative sheets setup
+├── logs/                         # Local inquiry logs (gitignored)
 └── vercel.json                   # Deployment config
 ```
 
@@ -211,6 +226,19 @@ git push origin master
 ```
 
 ## 📈 Recent Updates & Changelog
+
+### v2.1.2 (Oct 14, 2024) - Data Logging & Google Sheets Integration
+**Comprehensive Data Logging Solution**
+- **NEW**: Dynamic Google Sheets integration with auto-adapting columns
+- **NEW**: Local CSV/JSON logging with web viewer
+- **NEW**: Export endpoint for downloading inquiry data
+- **ADDED**: Automatic webhook for Google Sheets (zero-maintenance)
+- **ADDED**: View logs at /api/view_logs
+- **ADDED**: Download CSV at /api/export_logs
+- **FIXED**: Vercel serverless function crashes (using /tmp directory)
+- **IMPROVED**: Numbered selection for diffuser types (1-5)
+- **UI**: Chat message width increased by 20%
+- **UI**: Tank dimensions image reduced to 75% size
 
 ### v2.1.1 (Oct 14, 2024) - Bug Fixes & UI Improvements
 **Environment Factor & Calculation Fixes**
@@ -269,6 +297,53 @@ git push origin master
 - Multiple tank configurations
 - Pipe system calculations
 - Diffuser selection
+
+## 📊 Data Logging & Google Sheets Integration
+
+### Dynamic Google Sheets Integration (Recommended)
+The system now includes a **zero-maintenance** Google Sheets integration that automatically adapts to data structure changes:
+
+#### Setup (One-time, 3 minutes)
+1. Create a Google Sheet (leave row 1 empty)
+2. Add the smart Apps Script from `DYNAMIC_SHEETS_SETUP.md`
+3. Deploy as web app and get webhook URL
+4. Add URL to `api/config.py`
+5. Done! Never needs updating again
+
+#### How It Works
+- **First data**: Creates headers automatically
+- **New fields**: Adds columns dynamically
+- **Removed fields**: Old columns preserved
+- **Changed structure**: Adapts instantly
+
+#### Example Flow
+```
+Day 1: {email, application, pressure} → Creates 3 columns
+Day 2: {email, application, pressure, NEW_FIELD} → Adds 4th column
+Day 3: {email, DIFFERENT_FIELD} → Adds 5th column
+```
+
+### Local Data Logging
+As a fallback, all inquiries are also logged locally:
+
+#### View Options
+- **Web Viewer**: https://blower-chatbot.vercel.app/api/view_logs
+- **CSV Export**: https://blower-chatbot.vercel.app/api/export_logs
+- **Local Files**: `logs/inquiries.csv` and `logs/inquiries.json`
+
+#### Features
+- Automatic CSV/JSON logging
+- Web-based viewer with statistics
+- Export endpoint for downloads
+- Works on Vercel (uses `/tmp` directory)
+
+### Configuration
+```python
+# api/config.py (gitignored)
+GOOGLE_SHEETS_WEBHOOK = "https://script.google.com/macros/s/.../exec"
+```
+
+Copy `api/config.example.py` to `api/config.py` and add your webhook URL.
 
 ## ⚠️ Important Architecture Notes
 
@@ -355,5 +430,5 @@ When making changes, update version in:
 
 ---
 
-*Last Updated: October 14, 2024 - v2.1.1*
+*Last Updated: October 14, 2024 - v2.1.2*
 *Document maintained by Liberlocus Development Team*
