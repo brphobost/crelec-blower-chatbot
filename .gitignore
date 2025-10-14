@@ -40,3 +40,5 @@ Thumbs.db
 # Backend specific
 backend/__pycache__/
 backend/api/__pycache__/
+# Config files with sensitive data
+api/config.py

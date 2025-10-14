@@ -8,6 +8,13 @@ from http.server import BaseHTTPRequestHandler
 import json
 import re
 import uuid
+import urllib.request
+import urllib.parse
+
+try:
+    from config import GOOGLE_SHEETS_WEBHOOK
+except ImportError:
+    GOOGLE_SHEETS_WEBHOOK = ""
 
 try:
     from enhanced_calculator import EnhancedBlowerCalculator
@@ -76,6 +83,46 @@ except ImportError as e:
                 'messages': ['Using fallback calculator' if not USING_ENHANCED else 'Using enhanced calculator'],
                 'warnings': []
             }
+
+def log_to_google_sheets(session_data, calculation_result):
+    """Send inquiry data to Google Sheets via webhook"""
+    if not GOOGLE_SHEETS_WEBHOOK:
+        return  # Skip if webhook not configured
+
+    try:
+        payload = {
+            'quote_id': session_data.get('quote_id', ''),
+            'email': session_data.get('email', ''),
+            'application': session_data.get('application', ''),
+            'environment': session_data.get('environment', ''),
+            'operation_type': session_data.get('operation_type', ''),
+            'altitude': session_data.get('altitude', ''),
+            'location': session_data.get('location', ''),
+            'num_tanks': session_data.get('num_tanks', ''),
+            'tank_config': session_data.get('tank_config', ''),
+            'length': session_data.get('length', ''),
+            'width': session_data.get('width', ''),
+            'height': session_data.get('height', ''),
+            'pipe_diameter': session_data.get('pipe_diameter', ''),
+            'pipe_length': session_data.get('pipe_length', ''),
+            'num_bends': session_data.get('num_bends', ''),
+            'diffuser_type': session_data.get('diffuser_type', ''),
+            'airflow_m3_hr': round(calculation_result.get('airflow_m3_hr', 0), 1),
+            'pressure_mbar': round(calculation_result.get('pressure_mbar', 0), 0),
+            'power_kw': round(calculation_result.get('power_kw', 0), 1)
+        }
+
+        # Send to Google Sheets
+        req = urllib.request.Request(
+            GOOGLE_SHEETS_WEBHOOK,
+            data=json.dumps(payload).encode('utf-8'),
+            headers={'Content-Type': 'application/json'}
+        )
+        urllib.request.urlopen(req, timeout=5)
+        print(f"Logged inquiry to Google Sheets: {payload['quote_id']}")
+    except Exception as e:
+        print(f"Failed to log to Google Sheets: {e}")
+        # Don't let logging failure affect user experience
 
 # In-memory session storage (in production, use a database)
 sessions = {}
@@ -723,6 +770,12 @@ class handler(BaseHTTPRequestHandler):
                 # Add flags to trigger frontend email handling
                 response['send_email'] = True
                 response['email_data'] = email_data
+
+                # Log to Google Sheets if configured
+                session['data']['quote_id'] = quote_id
+                calculation_result = session['data'].get('results', {})
+                log_to_google_sheets(session['data'], calculation_result)
+
                 response['message'] = (
                     "✅ Thank you! Your quote is being generated...\\n\\n"
                     "You'll receive:\\n"
