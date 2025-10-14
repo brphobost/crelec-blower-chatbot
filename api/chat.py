@@ -11,8 +11,11 @@ import uuid
 
 try:
     from enhanced_calculator import EnhancedBlowerCalculator
-except ImportError:
+    USING_ENHANCED = True
+except ImportError as e:
     # Fallback if module not found
+    USING_ENHANCED = False
+    print(f"Failed to import enhanced_calculator: {e}")
     class EnhancedBlowerCalculator:
         def calculate(self, **kwargs):
             # Simple fallback calculation
@@ -64,7 +67,7 @@ except ImportError:
                     'num_tanks': kwargs.get('num_tanks', 1),
                     'configuration': kwargs.get('tank_config', 'parallel')
                 },
-                'messages': ['Using fallback calculator'],
+                'messages': ['Using fallback calculator' if not USING_ENHANCED else 'Using enhanced calculator'],
                 'warnings': []
             }
 
@@ -478,17 +481,26 @@ class handler(BaseHTTPRequestHandler):
                 f"✅ Pipe system: {pipe_msg}\\n\\n"
                 "**DIFFUSER TYPE**\\n\\n"
                 "What type of diffuser system will you use?\\n\\n"
-                "• **fine** - Fine bubble membrane (high efficiency)\\n"
-                "• **disc** - Ceramic disc diffusers\\n"
-                "• **coarse** - Coarse bubble/perforated pipe\\n"
-                "• **tube** - Tube diffusers\\n"
-                "• **custom** - Other/custom system\\n\\n"
-                "Type your choice:"
+                "**1.** Fine bubble membrane (high efficiency)\\n"
+                "**2.** Ceramic disc diffusers\\n"
+                "**3.** Coarse bubble/perforated pipe\\n"
+                "**4.** Tube diffusers\\n"
+                "**5.** Other/custom system\\n\\n"
+                "Please enter a number (1-5) or type the name:"
             )
             session['state'] = 'diffuser'
 
         elif session['state'] == 'diffuser':
             msg_lower = message.lower().strip()
+
+            # Map numbers to diffuser types
+            diffuser_map = {
+                '1': 'fine',
+                '2': 'disc',
+                '3': 'coarse',
+                '4': 'tube',
+                '5': 'custom'
+            }
 
             diffuser_types = {
                 'fine': 'Fine bubble membrane',
@@ -498,27 +510,32 @@ class handler(BaseHTTPRequestHandler):
                 'custom': 'Custom system'
             }
 
-            # Find matching type
+            # Check for numbered selection first
             selected_type = None
-            for key, name in diffuser_types.items():
-                if key in msg_lower:
-                    selected_type = key
-                    selected_name = name
-                    break
+            if msg_lower in diffuser_map:
+                selected_type = diffuser_map[msg_lower]
+                selected_name = diffuser_types[selected_type]
+            else:
+                # Find matching type by name
+                for key, name in diffuser_types.items():
+                    if key in msg_lower:
+                        selected_type = key
+                        selected_name = name
+                        break
 
-            if not selected_type:
-                if 'membrane' in msg_lower:
-                    selected_type = 'fine'
-                    selected_name = 'Fine bubble membrane'
-                elif 'ceramic' in msg_lower:
-                    selected_type = 'disc'
-                    selected_name = 'Ceramic disc'
-                elif 'perforated' in msg_lower:
-                    selected_type = 'coarse'
-                    selected_name = 'Coarse bubble'
-                else:
-                    selected_type = 'custom'
-                    selected_name = 'Custom system'
+                if not selected_type:
+                    if 'membrane' in msg_lower:
+                        selected_type = 'fine'
+                        selected_name = 'Fine bubble membrane'
+                    elif 'ceramic' in msg_lower:
+                        selected_type = 'disc'
+                        selected_name = 'Ceramic disc'
+                    elif 'perforated' in msg_lower:
+                        selected_type = 'coarse'
+                        selected_name = 'Coarse bubble'
+                    else:
+                        selected_type = 'custom'
+                        selected_name = 'Custom system'
 
             session['data']['diffuser_type'] = selected_type
 
@@ -537,7 +554,7 @@ class handler(BaseHTTPRequestHandler):
                 pipe_length=session['data'].get('pipe_length'),
                 num_bends=session['data'].get('num_bends'),
                 diffuser_type=selected_type,
-                environment_factor=session['data'].get('environment_factor', 1.0)
+                safety_factor=session['data'].get('environment_factor', 1.0)  # Pass as safety_factor
             )
 
             # Format the detailed response

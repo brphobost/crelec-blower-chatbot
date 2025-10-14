@@ -106,7 +106,7 @@ header p {
 }
 
 .message {
-    max-width: 70%;
+    max-width: 84%;
     padding: 12px 16px;
     border-radius: 18px;
     word-wrap: break-word;
@@ -370,7 +370,7 @@ header p {
     }
 
     .message {
-        max-width: 85%;
+        max-width: 90%;
     }
 
     #quick-actions {

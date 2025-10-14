@@ -204,8 +204,15 @@ class BlowerChat {
         // Convert escaped newlines (\n) to HTML breaks
         text = text.replace(/\\n/g, '<br>');
 
-        // Convert markdown images to HTML img tags
-        text = text.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width: 100%; height: auto; border-radius: 8px; margin: 10px 0;">');
+        // Convert markdown images to HTML img tags (75% size for tank dimensions)
+        text = text.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, src) => {
+            // Special handling for tank-dimensions image - make it 75% of original size
+            if (src.includes('tank-dimensions')) {
+                return `<img src="${src}" alt="${alt}" style="max-width: 75%; height: auto; border-radius: 8px; margin: 10px auto; display: block;">`;
+            }
+            // Default handling for other images
+            return `<img src="${src}" alt="${alt}" style="max-width: 100%; height: auto; border-radius: 8px; margin: 10px 0;">`;
+        });
 
         // Convert markdown-style formatting
         text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
