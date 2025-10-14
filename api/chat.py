@@ -17,6 +17,11 @@ except ImportError:
     GOOGLE_SHEETS_WEBHOOK = ""
 
 try:
+    from data_logger import log_inquiry as log_to_file
+except ImportError:
+    log_to_file = None
+
+try:
     from enhanced_calculator import EnhancedBlowerCalculator
     USING_ENHANCED = True
 except ImportError as e:
@@ -775,6 +780,14 @@ class handler(BaseHTTPRequestHandler):
                 session['data']['quote_id'] = quote_id
                 calculation_result = session['data'].get('results', {})
                 log_to_google_sheets(session['data'], calculation_result)
+
+                # Also log to local file
+                if log_to_file:
+                    try:
+                        log_to_file(session['data'], calculation_result)
+                        print(f"Logged inquiry to local file: {quote_id}")
+                    except Exception as e:
+                        print(f"Failed to log to file: {e}")
 
                 response['message'] = (
                     "✅ Thank you! Your quote is being generated...\\n\\n"
