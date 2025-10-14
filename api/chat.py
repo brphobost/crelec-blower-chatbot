@@ -17,28 +17,41 @@ except ImportError:
         def calculate(self, **kwargs):
             # Simple fallback calculation
             airflow = kwargs.get('tank_length', 6) * kwargs.get('tank_width', 3) * 0.25 * 60
-            pressure = kwargs.get('tank_depth', 2) * 100 * 1.3 + 250
-            power = (airflow * pressure) / (36000 * 0.5)
+            altitude = kwargs.get('altitude', 0)
+
+            # Calculate altitude correction (1% per 100m)
+            altitude_correction = 1 + (altitude / 100 / 100) if altitude > 0 else 1.0
+
+            # Base pressure calculation
+            base_pressure = kwargs.get('tank_depth', 2) * 100 * 1.3 + 250
+            # Apply altitude correction
+            pressure = base_pressure * altitude_correction
+
+            # Corrected airflow (slightly less effect than pressure)
+            flow_correction = 1 + (altitude / 120 / 100) if altitude > 0 else 1.0
+            corrected_airflow = airflow * flow_correction
+
+            power = (corrected_airflow * pressure) / (36000 * 0.5)
 
             return {
-                'airflow_m3_min': airflow / 60,
-                'airflow_m3_hr': airflow,
+                'airflow_m3_min': corrected_airflow / 60,
+                'airflow_m3_hr': corrected_airflow,
                 'pressure_mbar': pressure,
                 'power_kw': power,
                 'breakdown': {
                     'base_airflow_m3_min': airflow / 60,
                     'base_airflow_m3_hr': airflow,
-                    'corrected_airflow_m3_hr': airflow,
+                    'corrected_airflow_m3_hr': corrected_airflow,
                     'static_pressure': kwargs.get('tank_depth', 2) * 100,
                     'pipe_friction': 15,
                     'fitting_losses': 10,
                     'diffuser_loss': 250,
-                    'subtotal_pressure': pressure - 100,
+                    'subtotal_pressure': base_pressure - 100,
                     'safety_margin': 100,
-                    'total_pressure': pressure,
+                    'total_pressure': base_pressure,
                     'final_pressure': pressure,
                     'pipe_velocity': 10,
-                    'altitude_correction': 1.0,
+                    'altitude_correction': altitude_correction,
                     'safety_factor': 1.2,
                     'specific_gravity': 1.05
                 },
@@ -252,23 +265,20 @@ class handler(BaseHTTPRequestHandler):
                 response['message'] = (
                     f"✅ {config_msg} configured.\\n\\n"
                     "**TANK DIMENSIONS**\\n\\n"
+                    "![Tank Dimensions](/assets/images/tank-dimensions.png)\\n\\n"
+                    "*If image doesn't load, here's a text diagram:*\\n"
                     "```\\n"
                     "     Length (L)\\n"
                     "   ←─────────────→\\n"
                     "   ┌─────────────┐ ↑\\n"
-                    "   │             │ │ Width (W)\\n"
-                    "   │    TANK     │ │\\n"
-                    "   │   TOP VIEW  │ ↓\\n"
+                    "   │    TANK     │ │ Width (W)\\n"
+                    "   │  TOP VIEW   │ ↓\\n"
                     "   └─────────────┘\\n"
                     "\\n"
-                    "   Water Level\\n"
-                    "   ▼\\n"
                     "   ┌─────────────┐\\n"
-                    "   │≈≈≈≈≈≈≈≈≈≈≈≈≈│ ← Surface\\n"
-                    "   │             │ ↑\\n"
-                    "   │    WATER    │ │ Depth (D)\\n"
-                    "   │             │ ↓\\n"
-                    "   └─────────────┘ ← Bottom\\n"
+                    "   │≈≈≈≈≈≈≈≈≈≈≈≈≈│ ← Water Surface\\n"
+                    "   │             │ ↑ Depth (D)\\n"
+                    "   └─────────────┘ ↓\\n"
                     "    SIDE VIEW\\n"
                     "```\\n\\n"
                     "Please provide tank size in meters:\\n"

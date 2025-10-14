@@ -3,7 +3,7 @@
 ## Project Overview
 An intelligent chatbot system for Crelec S.A. that helps end-users select the right blower for their applications through a conversational interface. The system now features **professional-grade engineering calculations** including pipe losses, diffuser selection, and multiple tank configurations, with integrated Xero inventory management capabilities.
 
-## Current Version: v2.0.2 (October 2024)
+## Current Version: v2.0.3 (October 2024)
 - **Live URL**: https://blower-chatbot.vercel.app
 - **Repository**: https://github.com/brphobost/crelec-blower-chatbot
 - **Deployment**: Vercel (auto-deploys from GitHub)
@@ -598,6 +598,14 @@ pressure = depth * 100 * 1.3 + 50 + altitude_correction
 - **Fish Farm**: 6 × 0.002 = 0.012 m³/min (0.72 m³/hr) at 310 mbar
 
 ## 📈 Changelog
+
+### v2.0.3 (Oct 14, 2024)
+**Altitude Fix & Image Support**
+- **FIX**: Fallback calculator now properly calculates altitude correction
+- **FIX**: Altitude correction formula fixed to show proper percentage (10% for 1000m)
+- **NEW**: Created /frontend/assets/images/ folder for image resources
+- **NEW**: Tank dimension section ready for PNG image (fallback to ASCII)
+- **UPDATE**: Version number to v2.0.3
 
 ### v2.0.2 (Oct 14, 2024)
 **Altitude & Visual Improvements**
